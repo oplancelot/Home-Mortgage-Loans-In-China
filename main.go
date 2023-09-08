@@ -74,7 +74,7 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 
 	for month := 1; month <= loan.TermInMonths; month++ {
 		// 计算当月的利率
-		dueDate := calculateDueDate(startDate.AddDate(0, month-1, 0), month)
+		dueDate := calculateDueDate(startDate.AddDate(0, month, 0), month)
 		dueDateRate := loan.getInterestRate(dueDate)
 
 		interestPayment := remainingPrincipal * dueDateRate / 12 / 100
@@ -83,6 +83,9 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 			daysInFirstMonth := float64(daysUntilEndOfMonth(startDate))
 			interestPayment = remainingPrincipal * dueDateRate / 12 / 100 * (daysInFirstMonth / 31)
 		}
+		//日期在5.25日汇率变化，则6.18这一期，利息由不同的税率组成。
+
+
 		principalPayment := monthlyPayment
 		remainingPrincipal -= principalPayment
 		totalInterestPaid += interestPayment
@@ -109,7 +112,7 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 func calculateDueDate(startDate time.Time, month int) time.Time {
 	// 创建一个新日期，月份和年份会随着时间增加，但日期始终为18号
 	dueDate := time.Date(startDate.Year(), startDate.Month(), 18, 0, 0, 0, 0, startDate.Location())
-	if month ==1 {dueDate = time.Date(startDate.Year(), startDate.Month(), 25, 0, 0, 0, 0, startDate.Location())}	
+	// if month ==1 {dueDate = time.Date(startDate.Year(), startDate.Month(), 25, 0, 0, 0, 0, startDate.Location())}	
 	
 
 	return dueDate
