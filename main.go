@@ -16,6 +16,23 @@ type Loan struct {
 	NewInterestRate  float64     // 变更后的年利率
 }
 
+
+// 获取给定日期的利率
+
+func (loan *Loan) getInterestRate(date time.Time) float64 {
+    // 默认使用原始利率
+    interestRate := loan.InterestRate
+    for _, entry := range loan.RateEntries {
+        if date.After(entry.Date) || date.Equal(entry.Date) {
+            // 如果日期在或之后 RateEntry 中的日期，则更新利率和 RateChangeDate
+            interestRate = entry.Rate
+            loan.RateChangeDate = entry.Date
+        }
+    }
+    return interestRate
+}
+
+
 // RateEntry represents the date and interest rate entry.
 type RateEntry struct {
 	Date time.Time // 日期
@@ -31,6 +48,17 @@ type Payment struct {
 	RemainingPrincipal float64 // 剩余本金
 	TotalInterestPaid  float64 // 已支付总利息
 	InterestRate       float64 // 利率
+	DueDate            time.Time // 还款日期
+}
+
+
+// 计算给定日期距离下月的天数
+func daysUntilEndOfMonth(date time.Time) int {
+	year, month, _ := date.Date()
+	nextMonth := time.Date(year, month+1, 18, 0, 0, 0, 0, date.Location())
+	daysUntilEnd := nextMonth.Sub(date).Hours() / 24
+	// fmt.Println(daysUntilEnd)
+	return int(daysUntilEnd)
 }
 
 // CalculateAmortizationSchedule calculates the amortization schedule for the loan.
@@ -46,15 +74,20 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 
 	for month := 1; month <= loan.TermInMonths; month++ {
 		// 计算当月的利率
-		currentMonth := startDate.AddDate(0, month, 0)
+		dueDate := calculateDueDate(startDate.AddDate(0, month-1, 0), month)
+		dueDateRate := loan.getInterestRate(dueDate)
 
-		
-		currentRate := loan.getInterestRate(currentMonth)
-
-		interestPayment := remainingPrincipal * currentRate / 12 / 100
+		interestPayment := remainingPrincipal * dueDateRate / 12 / 100
+		// 第一个月的利息根据天数计算
+		if month == 1 {
+			daysInFirstMonth := float64(daysUntilEndOfMonth(startDate))
+			interestPayment = remainingPrincipal * dueDateRate / 12 / 100 * (daysInFirstMonth / 31)
+		}
 		principalPayment := monthlyPayment
 		remainingPrincipal -= principalPayment
 		totalInterestPaid += interestPayment
+
+		
 
 		payment := Payment{
 			Month:              month,
@@ -63,7 +96,8 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 			MonthTotalAmount:   monthlyPayment + interestPayment,
 			RemainingPrincipal: remainingPrincipal,
 			TotalInterestPaid:  totalInterestPaid,
-			InterestRate:       currentRate,
+			InterestRate:       dueDateRate,
+			DueDate:            dueDate,
 		}
 		payments = append(payments, payment)
 	}
@@ -71,13 +105,17 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 	return payments
 }
 
-// 获取给定日期的利率
-func (loan *Loan) getInterestRate(date time.Time) float64 {
-	if date.Before(loan.RateChangeDate) || date.Equal(loan.RateChangeDate) {
-		return loan.InterestRate // 在利率变更日期之前使用原始利率
-	}
-	return loan.NewInterestRate // 在利率变更日期之后使用新的利率
+// Calculate the due date based on the start date and month.
+func calculateDueDate(startDate time.Time, month int) time.Time {
+	// 创建一个新日期，月份和年份会随着时间增加，但日期始终为18号
+	dueDate := time.Date(startDate.Year(), startDate.Month(), 18, 0, 0, 0, 0, startDate.Location())
+	if month ==1 {dueDate = time.Date(startDate.Year(), startDate.Month(), 25, 0, 0, 0, 0, startDate.Location())}	
+	
+
+	return dueDate
 }
+
+
 
 // 解析日期字符串并返回时间
 func parseDate(dateString string) time.Time {
@@ -104,21 +142,20 @@ loan := Loan{
     TermInMonths: loanTerm,
     StartDate:    startDate,
     RateEntries: []RateEntry{
-        {parseDate("2023-06-18"), 4.5}, // 2023年6月18日变更为4.5%的利率
-        {parseDate("2024-06-18"), 4.0}, // 2024年6月18日变更为4.0%的利率
+        {parseDate("2023-06-18"), 4.9}, // 2023年6月18日变更为4.5%的利率
+        {parseDate("2024-06-18"), 4.8}, // 2024年6月18日变更为4.0%的利率
         // 添加其他日期和利率条目
     },
     RateChangeDate:  parseDate("2023-06-18"), // 第一个利率变更日期
     NewInterestRate: 4.5,                   // 第一个利率变更后的利率
 }
 
-
 	// 计算等额本金还款计划
 	payments := loan.CalculateAmortizationSchedule()
 
 	// 输出更详细的还款计划
-	fmt.Println("期数\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
+	fmt.Println("期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
 	for _, payment := range payments {
-		fmt.Printf("%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.Month, payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.InterestRate)
+		fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.Month, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.InterestRate)
 	}
 }
