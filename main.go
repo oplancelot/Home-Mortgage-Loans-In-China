@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -19,7 +20,7 @@ type Loan struct {
 // LPR represents the date and interest LPR entry.
 type LPR struct {
 	Date time.Time // 日期
-	Lpr  float64   // 利率
+	LPR  float64   // 利率
 }
 
 // Payment represents the details of each monthly payment.
@@ -43,86 +44,141 @@ func parseDate(dateString string) time.Time {
 	return parsedTime
 }
 
-// 计算给定日期距离下月的天数
-func daysUntilEndOfMonth(date time.Time) int {
+// 计算给定日期距离下月还款日的天数
+func daysUntilEndOfMonth(date time.Time, dueDay int) int {
 	year, month, _ := date.Date()
-	nextMonth := time.Date(year, month+1, 18, 0, 0, 0, 0, date.Location())
+
+	// 获取日期到还款日的天数
+	nextMonth := time.Date(year, month+1, dueDay, 0, 0, 0, 0, date.Location())
 	daysUntilEnd := nextMonth.Sub(date).Hours() / 24
-	// fmt.Println(daysUntilEnd)
+	daysUntilEnd = daysUntilEnd - 1
+	fmt.Println(daysUntilEnd)
 	return int(daysUntilEnd)
 }
 
+// 计算给定日期到上个月相同日的天数
+func daysUntilLastMonthSameDay(date time.Time) int {
+	// 获取给定日期的年份、月份和日
+	year, month, day := date.Date()
+
+	// 计算上个月的年份和月份
+	lastMonth := month - 1
+	lastYear := year
+
+	if lastMonth < 1 {
+		lastMonth = 12
+		lastYear--
+	}
+
+	// 创建上个月相同日的日期
+	lastMonthSameDay := time.Date(lastYear, lastMonth, day, 0, 0, 0, 0, date.Location())
+
+	// 计算日期差异的天数
+	daysUntilLastMonth := int(date.Sub(lastMonthSameDay).Hours() / 24)
+	daysUntilLastMonth = daysUntilLastMonth - 1
+	// fmt.Println(daysUntilLastMonth)
+
+	return daysUntilLastMonth
+}
+
 // Calculate the due date based on the start date and month.
-func calculateDueDate(startDate time.Time, dueday int) time.Time {
+func dueDate(startDate time.Time, dueday int) time.Time {
 	// 创建一个新日期，月份和年份会随着时间增加，日期为贷款合同中指定的还款日
 	dueDate := time.Date(startDate.Year(), startDate.Month()+1, dueday, 0, 0, 0, 0, startDate.Location())
 	return dueDate
 }
 
-// 获取指定年份的最接近的LPR
-func (loan *Loan) getClosestLPRForYear(dueDate time.Time) float64 {
-	// 提取startDate和dueDate的月份和日期
-	startMonth := loan.StartDate.Month()
-	startDay := loan.StartDate.Day()
-	dueYear := dueDate.Year()
-	dueMonth := dueDate.Month()
-	dueDay := loan.Dueday
+// 获取离指定日期最近的LPR
+func (loan *Loan) getClosestLPRForYear(LPRDate time.Time) float64 {
 
 	// 找到小于或等于给定年份的最近的RateEntry日期
 	var selectedRate float64
-	var compareDate time.Time
-
-	if dueMonth < startMonth || (dueMonth == startMonth && dueDay < startDay) {
-		compareDate = time.Date(dueYear-1, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
-	} else {
-		compareDate = time.Date(dueYear, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
-	}
-	// fmt.Println(dueDate, compareDate, selectedRate)
 
 	for _, entry := range loan.LPRS {
-		// 如果找到比 compareDate 之前的日期，且比当前选定的日期更接近，则更新 selectedRate 和 compareDate
-		if entry.Date.Before(compareDate) && (selectedRate == 0 || compareDate.Sub(entry.Date) < compareDate.Sub(compareDate)) {
-			selectedRate = entry.Lpr
-			compareDate = entry.Date
+		// 如果找到比 LPRDate 之前的日期，且比当前选定的日期更接近，则更新 selectedRate 和 LPRDate
+		if entry.Date.Before(LPRDate) && (selectedRate == 0 || LPRDate.Sub(entry.Date) < LPRDate.Sub(LPRDate)) {
+			selectedRate = entry.LPR
+			LPRDate = entry.Date
 		}
 	}
-	// fmt.Println(dueDate, compareDate, selectedRate)
 
 	return selectedRate
 
 }
 
+// 取两位小数
+func roundToTwoDecimalPlaces(value float64) float64 {
+	return math.Round(value*100) / 100
+}
+
 // CalculateAmortizationSchedule calculates the amortization schedule for the loan.
 func (loan *Loan) CalculateAmortizationSchedule() []Payment {
+	var LPRDate time.Time
+	var interestPayment float64
+	var currentYearRate, currentYearLPR float64
+	var changemonth int
 
-	monthlyPayment := loan.Principal / float64(loan.TermInMonths)
+	principalPayment := roundToTwoDecimalPlaces(loan.Principal / float64(loan.TermInMonths))
 	payments := make([]Payment, 0)
-
 	remainingPrincipal := loan.Principal
 	totalInterestPaid := 0.0
-	dueDate := calculateDueDate(loan.StartDate, loan.Dueday)
+	dueDate := dueDate(loan.StartDate, loan.Dueday)
 
-	// fmt.Println(dueDate)
+	startMonth := loan.StartDate.Month()
+	startDay := loan.StartDate.Day()
 
 	for month := 1; month <= loan.TermInMonths; month++ {
-		currentYearLPR := loan.getClosestLPRForYear(dueDate)
-		currentYearRate := currentYearLPR + loan.PlusSpread
-		// previousYearRate := previousYearLPR + loan.PlusSpread
 
-		var interestPayment float64
-		// 第一个月的利息根据天数计算
-		if month == 1 {
-			daysInFirstMonth := float64(daysUntilEndOfMonth(loan.StartDate))
-			interestPayment = remainingPrincipal * currentYearRate / 12 / 100 * (daysInFirstMonth / 31)
-			// } else if dueDate.Month() == loan.StartDate.Month() {
-			// 	interestPayment = remainingPrincipal * (previousYearRate) / 12 / 100 //lpr变更当月
+		// var previousYearRate, previousYearLPR float64
+		// var lastcompareDate time.Time
+
+		// 3.如果是变更月，则需要返回上一年以及当年的LPR
+		// 4.
+
+		// 提取startDate和dueDate的月份和日期
+		dueYear := dueDate.Year()
+		dueMonth := dueDate.Month()
+		dueDay := dueDate.Day()
+
+		// 获取LPR规则如下
+		// 1.如果日期在变更日之前则取离上一年变更日最近的LPR
+		// 2.如果日期在变更日或者之后，则取离当年变更日最近的LPR
+		if dueMonth < startMonth || (dueMonth == startMonth && dueDay < startDay) {
+			LPRDate = time.Date(dueYear-1, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
 		} else {
-			interestPayment = remainingPrincipal * (currentYearRate) / 12 / 100
+			LPRDate = time.Date(dueYear, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
+		}
+
+		if startDay < dueDay {
+			changemonth = month
+		} else {
+			changemonth = month + 1
+		}
+
+		// // 第一个月的利息根据天数计算
+		if month == 1 {
+			//2968.28
+			// 利率周期2022-05-18 ~ 2022-06-17 共30天
+			// 实际天数2022-05-26 ~ 2022-06-17 共23天
+
+			days := int(dueDate.Sub(loan.StartDate).Hours() / 24)
+			fmt.Println(days)
+			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
+			currentYearRate = currentYearLPR + loan.PlusSpread
+			interestPayment = remainingPrincipal * currentYearRate / 12 / 100 * (float64(days-1) / 30)
+		} else if month == changemonth { // 利率变更月特殊处理
+			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
+			currentYearRate = currentYearLPR + loan.PlusSpread
+			interestPayment = roundToTwoDecimalPlaces(remainingPrincipal * currentYearRate / 100 / 12)
+		} else {
+			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
+			currentYearRate = currentYearLPR + loan.PlusSpread
+			// daysInMonth = daysUntilLastMonthSameDay(dueDate)
+			interestPayment = roundToTwoDecimalPlaces(remainingPrincipal * currentYearRate / 100 / 12)
 
 		}
 
 		// interestPayment = remainingPrincipal * (currentYearRate) / 12 / 100
-		principalPayment := monthlyPayment
 		remainingPrincipal -= principalPayment
 		totalInterestPaid += interestPayment
 
@@ -130,7 +186,7 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 			Month:              month,
 			Principal:          principalPayment,
 			Interest:           interestPayment,
-			MonthTotalAmount:   monthlyPayment + interestPayment,
+			MonthTotalAmount:   principalPayment + interestPayment,
 			RemainingPrincipal: remainingPrincipal,
 			TotalInterestPaid:  totalInterestPaid,
 			DueDateRate:        currentYearRate,
@@ -224,12 +280,12 @@ func main() {
 	// 输出更详细的还款计划
 	fmt.Println("期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
 	for _, payment := range payments {
-		fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.Month, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
-		// 	// 只打印前10行记录
-		// 	if payment.Month <= 10 {
-		// 		fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.Month, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
-		// 	} else {
-		// 		break // 如果已经打印了前10行，就退出循环
-		// 	}
+		// fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.Month, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
+		// 只打印前10行记录
+		if payment.Month <= 20 {
+			fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.Month, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
+		} else {
+			break // 如果已经打印了前10行，就退出循环
+		}
 	}
 }
