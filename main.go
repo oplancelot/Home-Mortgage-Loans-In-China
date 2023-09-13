@@ -43,21 +43,48 @@ func parseDate(dateString string) time.Time {
 	}
 	return parsedTime
 }
-func calculateInterestRatePeriod(startDate time.Time, dueDate time.Time) (float64, float64, float64) {
-	// 计算利率周期的天数
-	periodDays := dueDate.Sub(startDate).Hours() / 24
 
-	// 利率变更日前的天数
-	daysBefore := startDate.Sub(dueDate).Hours() / 24
+// func daysInMonth(date time.Time) int {
+// 	year, month, _ := date.Date()
+// 	nextMonth := time.Date(year, month+1, 0, 0, 0, 0, 0, date.Location())
+// 	return nextMonth.Day()
+// }
+
+func daysUntilLastMonthSameDay(date time.Time) int {
+	lastMonth := date.AddDate(0, -1, 0)
+	// 计算两个日期之间的天数差异
+	daysDiff := int(date.Sub(lastMonth).Hours() / 24)
+
+	return daysDiff
+}
+
+// 取两位小数
+func roundToTwoDecimalPlaces(value float64) float64 {
+	return math.Round(value*100) / 100
+}
+
+// 计算LPR变更当月执行不同利率的天数
+func (loan *Loan) calculateInterestRatePeriod(dueDate time.Time) (periodDays, daysBefore, daysAfter int) {
+	// var daysBefore ,daysAfter int
+	// 计算利率周期的天数
+	periodDays = daysUntilLastMonthSameDay(dueDate)
+
+	if loan.StartDate.Day() < loan.Dueday {
+		// 利率变更日前的天数
+		daysBefore = loan.Dueday - loan.StartDate.Day()
+	} else {
+		daysBefore = loan.StartDate.Day() - loan.Dueday
+	}
 
 	// 利率变更日后的天数
-	daysAfter := periodDays - daysBefore
+	daysAfter = periodDays - daysBefore
 
-	return float64(periodDays), float64(daysBefore), float64(daysAfter)
+	// fmt.Println(dueDate, periodDays, daysBefore, daysAfter)
+	return
 }
 
 // Calculate the due date based on the start date and month.
-func dueDate(startDate time.Time, dueday int) time.Time {
+func (loan *Loan) dueDate(startDate time.Time, dueday int) time.Time {
 	// 创建一个新日期，月份和年份会随着时间增加，日期为贷款合同中指定的还款日
 	dueDate := time.Date(startDate.Year(), startDate.Month()+1, dueday, 0, 0, 0, 0, startDate.Location())
 	return dueDate
@@ -81,23 +108,24 @@ func (loan *Loan) getClosestLPRForYear(LPRDate time.Time) float64 {
 
 }
 
-// 取两位小数
-func roundToTwoDecimalPlaces(value float64) float64 {
-	return math.Round(value*100) / 100
-}
-
 // CalculateAmortizationSchedule calculates the amortization schedule for the loan.
 func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 	var LPRDate time.Time
 	var interestPayment float64
 	var currentYearRate, currentYearLPR float64
-	var changemonth int
+	var changemonth time.Month
 
 	principalPayment := roundToTwoDecimalPlaces(loan.Principal / float64(loan.TermInMonths))
 	payments := make([]Payment, 0)
 	remainingPrincipal := loan.Principal
 	totalInterestPaid := 0.0
-	dueDate := dueDate(loan.StartDate, loan.Dueday)
+	dueDate := loan.dueDate(loan.StartDate, loan.Dueday)
+
+	if loan.StartDate.Day() < loan.Dueday {
+		changemonth = loan.StartDate.Month()
+	} else {
+		changemonth = loan.StartDate.Month() + 1
+	}
 
 	for month := 1; month <= loan.TermInMonths; month++ {
 
@@ -126,30 +154,30 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 			//2968.28
 			// 利率周期2022-05-18 ~ 2022-06-17 共30天
 			// 实际天数2022-05-26 ~ 2022-06-17 共23天
-
 			days := int(dueDate.Sub(loan.StartDate).Hours() / 24)
 			// fmt.Println(days)
 			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
 			currentYearRate = currentYearLPR + loan.PlusSpread
 			interestPayment = remainingPrincipal * currentYearRate / 12 / 100 * (float64(days-1) / 30)
-		} else if month == changemonth {
+		} else if dueMonth == changemonth {
 			// 利率变更月特殊处理 3657.38
 			// 分为两段
-			// 上一年利率 2023-05-18 ~ 2023-06-24
-			periodDays, daysBefore, daysAfter := calculateInterestRatePeriod(loan.StartDate, dueDate)
+			// 上一年利率 2023-05-18 ~ 2023-05-24
+			periodDays, daysBefore, daysAfter := loan.calculateInterestRatePeriod(dueDate)
+
 			LPRDate = time.Date(dueYear-1, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
 			// fmt.Println(periodDays, daysBefore, daysAfter, LPRDate)
 			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
+			fmt.Println(periodDays, daysBefore, daysAfter, currentYearLPR)
 			currentYearRate = currentYearLPR + loan.PlusSpread
-			interestPayment = roundToTwoDecimalPlaces(remainingPrincipal * currentYearRate / 100 / 12 * daysBefore / periodDays)
+			interestPayment = roundToTwoDecimalPlaces(remainingPrincipal * currentYearRate / 100 / 12 * float64(daysBefore) / float64(periodDays))
 
 			// 当年利率 2023-05-25 ~ 2023-06-18
 			LPRDate = time.Date(dueYear, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
-			// fmt.Println(periodDays, daysBefore, daysAfter, LPRDate)
-
 			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
+			fmt.Println(periodDays, daysBefore, daysAfter, currentYearLPR)
 			currentYearRate = currentYearLPR + loan.PlusSpread
-			interestPayment = interestPayment + roundToTwoDecimalPlaces(remainingPrincipal*currentYearRate/100/12*daysAfter/periodDays)
+			interestPayment = interestPayment + roundToTwoDecimalPlaces(remainingPrincipal*currentYearRate/100/12*float64(daysAfter)/float64(periodDays))
 
 		} else {
 			currentYearLPR = loan.getClosestLPRForYear(LPRDate)
