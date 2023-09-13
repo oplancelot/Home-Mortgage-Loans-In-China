@@ -96,6 +96,63 @@ func (loan *Loan) getClosestLPRForYear(lprChangeDate time.Time) float64 {
 	return selectedRate
 }
 
+// 提前还款
+type PaymentWithIndex struct {
+	Index   int
+	Payment Payment
+}
+
+// 提前还款
+type IPaymentWithIndex struct {
+	Index   int
+	Payment Payment
+}
+
+// Add contents of payments to IPaymentWithIndex slice
+func AddPaymentsToIPaymentWithIndex(payments []Payment) []IPaymentWithIndex {
+	ipayments := make([]IPaymentWithIndex, len(payments))
+	for i, payment := range payments {
+		ipayment := IPaymentWithIndex{
+			Index:   i,
+			Payment: payment,
+		}
+		ipayments[i] = ipayment
+	}
+	return ipayments
+}
+
+// // 提前还款
+// func (loan *Loan) MakeEarlyRepayment(amount float64, repaymentDate time.Time) IPaymentWithIndex {
+// 	// 计算提前还款后的剩余本金
+// 	remainingPrincipal := loan.Principal - amount
+
+// 	// 计算剩余期限
+// 	remainingDays := int(repaymentDate.Sub(time.Now()).Hours() / 24)
+
+// 	// 计算每天的利息
+// 	dailyInterest := loan.Interest / 365
+
+// 	// 计算提前还款的利息
+// 	earlyRepaymentInterest := dailyInterest * float64(remainingDays)
+
+// 	// 更新剩余本金
+// 	loan.Principal = remainingPrincipal
+
+// 	// 更新利息
+// 	loan.Interest = earlyRepaymentInterest
+
+// 	// 重新计算还款计划
+// 	loan.CalculateLoanRepaymentSchedule()
+
+// 	// 构建带有序号的PaymentWithIndex结构体
+// 	paymentWithIndex := IPaymentWithIndex{
+// 		Index:   len(loan.RepaymentSchedule),
+// 		Payment: loan.RepaymentSchedule[len(loan.RepaymentSchedule)-1],
+// 	}
+
+// 	return paymentWithIndex
+// }
+
 // CalculateAmortizationSchedule calculates the amortization schedule for the loan.
 func (loan *Loan) CalculateLoanRepaymentSchedule() []Payment {
 	var lprChangeDate time.Time // 计算lpr的日期
@@ -134,7 +191,7 @@ func (loan *Loan) CalculateLoanRepaymentSchedule() []Payment {
 			lprChangeDate = time.Date(nextDueYear, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
 		}
 
-		// // 第一个月的利息根据天数计算
+		//  第一个月的利息根据天数计算
 		if loanTerm == 1 {
 			// 2968.28
 			// 利率周期2022-05-18 ~ 2022-06-17 共30天
@@ -263,16 +320,27 @@ func main() {
 
 	// 计算等额本金还款计划
 	payments := loan.CalculateLoanRepaymentSchedule()
+	var iPaymentWithIndex []IPaymentWithIndex
+	iPaymentWithIndex = AddPaymentsToIPaymentWithIndex(payments)
+	// 输出iPaymentWithIndexs的所有内容
+
+	fmt.Println("序号\t期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
+	for _, ip := range iPaymentWithIndex {
+		fmt.Printf("%d\t%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", ip.Index, ip.Payment.LoanTerm, ip.Payment.DueDate.Format("2006-01-02"), ip.Payment.Principal, ip.Payment.Interest, ip.Payment.MonthTotalAmount, ip.Payment.RemainingPrincipal, ip.Payment.TotalInterestPaid, ip.Payment.DueDateRate)
+
+	}
 
 	// 输出更详细的还款计划
-	fmt.Println("期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
-	for _, payment := range payments {
-		fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.LoanTerm, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
-		// // 只打印前10行记录
-		// if payment.LoanTerm <= 20 {
-		// 	fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.LoanTerm, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
-		// } else {
-		// 	break // 如果已经打印了前10行，就退出循环
-		// }
-	}
+	// fmt.Println("序号\t期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
+	// for _, payment := range payments {
+	// 	fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.LoanTerm, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
+	// 	// // 只打印前10行记录
+	// 	// if payment.LoanTerm <= 20 {
+	// 	// 	fmt.Printf("%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", payment.LoanTerm, payment.DueDate.Format("2006-01-02"), payment.Principal, payment.Interest, payment.MonthTotalAmount, payment.RemainingPrincipal, payment.TotalInterestPaid, payment.DueDateRate)
+	// 	// } else {
+	// 	// 	break // 如果已经打印了前10行，就退出循环
+	// 	// }
+	// }
 }
+
+// 写一个提前还款函数
