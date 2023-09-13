@@ -99,28 +99,18 @@ func (loan *Loan) CalculateAmortizationSchedule() []Payment {
 	totalInterestPaid := 0.0
 	dueDate := dueDate(loan.StartDate, loan.Dueday)
 
-	// 提取startDate和dueDate的月份和日期
-	dueYear := dueDate.Year()
-	dueMonth := dueDate.Month()
-	dueDay := dueDate.Day()
-
-	startMonth := loan.StartDate.Month()
-	startDay := loan.StartDate.Day()
-
-	if startDay < dueDay {
-		changemonth = int(startMonth)
-	} else {
-		changemonth = int(startMonth) + 1
-	}
-	println(changemonth)
-
 	for month := 1; month <= loan.TermInMonths; month++ {
 
 		// var previousYearRate, previousYearLPR float64
 		// var lastcompareDate time.Time
 
-		// 3.如果是变更月，则需要返回上一年以及当年的LPR
-		// 4.
+		// 提取startDate和dueDate的月份和日期
+		dueYear := dueDate.Year()
+		dueMonth := dueDate.Month()
+		dueDay := dueDate.Day()
+
+		startMonth := loan.StartDate.Month()
+		startDay := loan.StartDate.Day()
 
 		// 获取LPR规则如下
 		// 1.如果日期在变更日之前则取离上一年变更日最近的LPR
