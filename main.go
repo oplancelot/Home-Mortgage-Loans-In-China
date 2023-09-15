@@ -35,6 +35,12 @@ type Payment struct {
 	DueDate            time.Time // 当月还款日期
 }
 
+// 提前还款
+type EarlyRepayment struct {
+	Amount float64   // 提前还款金额
+	Date   time.Time // 提前还款日期
+}
+
 // parseDate 解析日期字符串并返回时间。如果出现错误，将返回一个零值时间。
 func parseDate(dateString string) time.Time {
 	layout := "2006-01-02" // 统一的日期布局字符串
@@ -114,7 +120,7 @@ type PaymentWithIndex struct {
 
 // Add contents of payments to IPaymentWithIndex slice
 func paymentsWithIndex(payments []Payment) []PaymentWithIndex {
-	ipayments := make([]IPaymentWithIndex, len(payments))
+	ipayments := make([]PaymentWithIndex, len(payments))
 	for i, payment := range payments {
 		ipayment := PaymentWithIndex{
 			Index:   i,
@@ -125,57 +131,31 @@ func paymentsWithIndex(payments []Payment) []PaymentWithIndex {
 	return ipayments
 }
 
-// 提前还款
-type EarlyRepayment struct {
-	Interest           float64   // 提前还款的利息,Amount的一部分
-	RemainingPrincipal float64   // 剩余本金
-	Amount             float64   // 提前还款金额
-	Date               time.Time // 提前还款日期
-}
-
-func (loan *Loan) makeEarlyRepayment(early *EarlyRepayment) (float64, float64) {
-	var dueDate time.Time
-	// 提前还款日距离上一个已经执行的还款日的天数
-	if early.Date.Day() < loan.StartDate.Day() {
-		dueDate = time.Date(early.Date.Year(), early.Date.Month()-1, loan.PaymentDueDay, 0, 0, 0, 0, loan.StartDate.Location())
-	} else {
-		dueDate = time.Date(early.Date.Year(), early.Date.Month(), loan.PaymentDueDay, 0, 0, 0, 0, loan.StartDate.Location())
-	}
-
-	// 计算提前还款的利息
-	currentYearLPR := loan.getClosestLPRForYear(dueDate)
-	currentYearRate := currentYearLPR + loan.PlusSpread
-	early.Interest = early.RemainingPrincipal * currentYearRate / 360 * float64(daysDiff(dueDate, early.Date))
-
-	// 计算提前还款后的剩余本金
-	early.RemainingPrincipal -= early.RemainingPrincipal - early.Amount + early.Interest
-
-	// return loan.makeEarlyRepayment(early.RemainingPrincipal, early.Interest)
-
-	return early.RemainingPrincipal, early.Interest
-
-}
-
 // 如果本月有提前还款,则本月的利息计算分为两段,第一段为提前还款的利息,第二段为剩余本金的利息。
-// func (loan *Loan) makeEarlyRepayment(remainingPrincipal float64, amount float64, earlyRepaymentDate time.Time) (float64, float64) {
+
+// func (loan *Loan) makeEarlyRepayment(early *EarlyRepayment) {
 // 	var dueDate time.Time
+// 	// 如果本月有提前还款,则本月的利息计算分为两段,第一段为提前还款的利息,第二段为剩余本金的利息。
 // 	// 提前还款日距离上一个已经执行的还款日的天数
-// 	if earlyRepaymentDate.Day() < loan.StartDate.Day() {
-// 		dueDate = time.Date(earlyRepaymentDate.Year(), earlyRepaymentDate.Month()-1, loan.PaymentDueDay, 0, 0, 0, 0, loan.StartDate.Location())
+// 	if early.Date.Day() < loan.StartDate.Day() {
+// 		dueDate = time.Date(early.Date.Year(), early.Date.Month()-1, loan.PaymentDueDay, 0, 0, 0, 0, loan.StartDate.Location())
 // 	} else {
-// 		dueDate = time.Date(earlyRepaymentDate.Year(), earlyRepaymentDate.Month(), loan.PaymentDueDay, 0, 0, 0, 0, loan.StartDate.Location())
+// 		dueDate = time.Date(early.Date.Year(), early.Date.Month(), loan.PaymentDueDay, 0, 0, 0, 0, loan.StartDate.Location())
 // 	}
 
 // 	// 计算提前还款的利息
 // 	currentYearLPR := loan.getClosestLPRForYear(dueDate)
 // 	currentYearRate := currentYearLPR + loan.PlusSpread
-// 	earlyRepaymentInterest := remainingPrincipal * currentYearRate / 360 * float64(daysDiff(dueDate, earlyRepaymentDate))
+// 	early.Interest = early.RemainingPrincipal * currentYearRate / 360 * float64(daysDiff(dueDate, early.Date))
 
 // 	// 计算提前还款后的剩余本金
-// 	remainingPrincipal -= remainingPrincipal - amount + earlyRepaymentInterest
+// 	early.RemainingPrincipal -= early.RemainingPrincipal - early.Amount + early.Interest
 
-//		return remainingPrincipal, earlyRepaymentInterest
-//	}
+// 	// return loan.makeEarlyRepayment(early.RemainingPrincipal, early.Interest)
+
+// 	return
+
+// }
 
 // 计算利息的规则
 // 1.天数:全年360天,12个月每月30天
@@ -190,7 +170,7 @@ func (loan *Loan) makeEarlyRepayment(early *EarlyRepayment) (float64, float64) {
 //	第一段lpr为前一年lpr,天数是变更日~还款日(取头去尾)
 //	第二段为当年lpr,天数是30-第一段
 
-func (loan *Loan) loanRepaymentSchedule() []Payment {
+func (loan *Loan) loanRepaymentSchedule(earlyRepayments []EarlyRepayment) []Payment {
 	var lprUpdateDate time.Time // 计算lpr的日期
 	var interestPayment float64
 	var currentYearRate float64
@@ -216,9 +196,19 @@ func (loan *Loan) loanRepaymentSchedule() []Payment {
 
 		startMonth := loan.StartDate.Month()
 		startDay := loan.StartDate.Day()
-
+		previousDueDate := previousDueDate(dueDate)
 		// 此处处理提前还款,在正常还款期前更新本金额
-		// makeEarlyRepayment(early * EarlyRepayment)
+		/// 检查是否有提前还款需要处理
+
+		for _, early := range earlyRepayments {
+			if early.Date.After(previousDueDate) && early.Date.Before(dueDate) {
+				// 处理提前还款，更新剩余本金等
+				remainingPrincipal -= early.Amount
+
+			}
+		}
+		// 更新每月还款本金
+		principalPayment = roundDecimalPlaces(remainingPrincipal / float64(loan.TermInMonths-loanTerm))
 
 		// 以下处理每月正常还款
 		// 获取LPR规则如下
@@ -264,6 +254,7 @@ func (loan *Loan) loanRepaymentSchedule() []Payment {
 			interestPayment = roundDecimalPlaces(remainingPrincipal * currentYearRate / 100 / 12)
 
 		}
+
 		remainingPrincipal -= principalPayment
 		totalInterestPaid += interestPayment
 
@@ -359,8 +350,13 @@ func main() {
 		PaymentDueDay: paymentDueDay,
 	}
 
+	// 输入提前还款信息
+	earlyRepayments := []EarlyRepayment{
+		{Amount: 200000, Date: parseDate("2023-08-19")},
+	}
+
 	// 计算等额本金还款计划
-	payments := loan.loanRepaymentSchedule()
+	payments := loan.loanRepaymentSchedule(earlyRepayments)
 
 	iPaymentWithIndex := paymentsWithIndex(payments)
 
