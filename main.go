@@ -235,7 +235,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
 			// interestPayment = remainingPrincipal * currentYearRate / 100 / 360 * (float64(days))
-			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days)
+			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 
 		} else if dueMonth == lprChangeMonth {
 			// 利率变更月特殊处理 3657.38
@@ -247,14 +247,14 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			// previousYearRate := previousYearLPR + loan.PlusSpread
 			previousYearRate := previousYearLPR.Add(loan.PlusSpread)
 			// interestPayment = (remainingPrincipal * previousYearRate / 100 / 360) * float64(daysBefore)
-			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore)
+			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore).Round(2)
 
 			// 当年利率 2023-05-25 ~ 2023-06-18
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			// currentYearRate = currentYearLPR + loan.PlusSpread
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
 			// interestPayment += (remainingPrincipal * currentYearRate / 100 / 360) * float64(daysAfter)
-			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter))
+			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(2)
 		} else {
 
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
@@ -265,13 +265,13 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 
 			// interestPayment = remainingPrincipal * currentYearRate / 100 / 360 * (float64(days))
 			remainDay := days.Sub(earlydays)
-			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay)
+			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
 
 		}
 
-		remainingPrincipal = remainingPrincipal.Sub(principalPayment)
+		remainingPrincipal = remainingPrincipal.Sub(principalPayment).Round(2)
 		// totalInterestPaid += interestPayment
-		totalInterestPaid = totalInterestPaid.Add(interestPayment)
+		totalInterestPaid = totalInterestPaid.Add(interestPayment).Round(2)
 
 		payment := Payment{
 			LoanTerm:           loanTerm,
