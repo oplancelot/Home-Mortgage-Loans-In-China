@@ -351,6 +351,7 @@ func main() {
 	// 输入提前还款信息
 	earlyRepayments := []EarlyRepayment{
 		{Amount: 200000, Date: parseDate("2023-08-19")},
+		{Amount: 200000, Date: parseDate("2024-08-19")},
 	}
 
 	// 计算等额本金还款计划
@@ -361,7 +362,7 @@ func main() {
 	// 输出iPaymentWithIndex的所有内容
 	fmt.Println("序号\t期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
 	for _, ip := range iPaymentWithIndex {
-		if ip.Index <= 20 {
+		if ip.Index <= 40 {
 			fmt.Printf("%d\t%d\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f%%\n", ip.Index, ip.Payment.LoanTerm, ip.Payment.DueDate.Format("2006-01-02"), ip.Payment.Principal, ip.Payment.Interest, ip.Payment.MonthTotalAmount, ip.Payment.RemainingPrincipal, ip.Payment.TotalInterestPaid, ip.Payment.DueDateRate)
 		}
 	}
