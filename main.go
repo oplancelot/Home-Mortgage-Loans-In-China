@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
+// NewFromFloat(5.45).StringFixed(2) // output: "5.45"
 // Loan represents the loan details.
+// 贷款输出项2位小数,利率6位小数(因为%是2位小数)
 type Loan struct {
 	Principal     float64   // 初始本金
 	DefaultLPR    float64   // 默认利率
@@ -19,6 +21,12 @@ type Loan struct {
 
 // LPR represents the date and interest LPR entry.
 type LPR struct {
+	Date time.Time // 日期
+	LPR  float64   // 利率
+}
+
+// LPR represents the date and interest LPR entry.
+type LPR1 struct {
 	Date time.Time // 日期
 	LPR  float64   // 利率
 }
@@ -159,7 +167,7 @@ func (loan *Loan) makeEarlyRepayment(remainingPrincipal float64, earlyRepayments
 			daysDiff := daysDiff(previousDueDate, early.Date)
 			earlyInterest := round2(remainingPrincipal * currentYearRate / 360 * float64(daysDiff))
 			remainingPrincipal = round2(remainingPrincipal + earlyInterest - early.Amount)
-			fmt.Println(dueDate, currentYearRate, earlyInterest, remainingPrincipal, daysDiff)
+			// fmt.Println(dueDate, currentYearRate, earlyInterest, remainingPrincipal, daysDiff)
 			return round2(remainingPrincipal), daysDiff
 		}
 	}
