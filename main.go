@@ -41,6 +41,12 @@ type EarlyRepayment struct {
 	Date   time.Time // 提前还款日期
 }
 
+// PaymentWithIndex
+type PaymentWithIndex struct {
+	Index   int
+	Payment Payment
+}
+
 // parseDate 解析日期字符串并返回时间。如果出现错误，将返回一个零值时间。
 func parseDate(dateString string) time.Time {
 	layout := "2006-01-02" // 统一的日期布局字符串
@@ -53,8 +59,12 @@ func parseDate(dateString string) time.Time {
 }
 
 // 取两位小数
-func roundDecimalPlaces(value float64) float64 {
+func round4(value float64) float64 {
 	return math.Round(value*10000) / 10000
+}
+
+func round2(value float64) float64 {
+	return math.Round(value*100) / 100
 }
 
 // 计算LPR变更当月执行不同利率的天数
@@ -128,12 +138,6 @@ func (loan *Loan) getClosestLPRForYear(dueDate time.Time) float64 {
 	return selectedRate
 }
 
-// 提前还款
-type PaymentWithIndex struct {
-	Index   int
-	Payment Payment
-}
-
 // Add contents of payments to IPaymentWithIndex slice
 func paymentsWithIndex(payments []Payment) []PaymentWithIndex {
 	ipayments := make([]PaymentWithIndex, len(payments))
@@ -149,24 +153,23 @@ func paymentsWithIndex(payments []Payment) []PaymentWithIndex {
 
 func (loan *Loan) makeEarlyRepayment(remainingPrincipal float64, earlyRepayments []EarlyRepayment, dueDate time.Time) (float64, int) {
 	// 如果本月有提前还款,则本月的利息计算分为两段,第一段为提前还款的利息,第二段为剩余本金的利息。
-	previousDueDate := previousDueDate(dueDate)
+	// fmt.Println(dueDate, remainingPrincipal)
 	days := 30
+	previousDueDate := previousDueDate(dueDate)
 	for _, early := range earlyRepayments {
 		if early.Date.After(previousDueDate) && early.Date.Before(dueDate) {
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
-			currentYearRate := currentYearLPR + loan.PlusSpread
-			earlyinterest := remainingPrincipal * currentYearRate / 360 * float64(daysDiff(previousDueDate, early.Date))
-			remainingPrincipal -= early.Amount + earlyinterest
+			currentYearRate := round4((currentYearLPR + loan.PlusSpread) / 100)
+			earlyinterest := round2(remainingPrincipal * currentYearRate / 360 * float64(daysDiff(previousDueDate, early.Date)))
+			remainingPrincipal = round2(remainingPrincipal + earlyinterest - early.Amount)
 			days := daysDiff(previousDueDate, early.Date)
 			fmt.Println(dueDate, currentYearRate, earlyinterest, remainingPrincipal, days)
 
-			// if dueDate == parseDate("2023-09-18") {
-			// 	fmt.Println(currentYearRate, earlyinterest, remainingPrincipal, days)
-			// }
 		}
+
 	}
 
-	return remainingPrincipal, days
+	return round2(remainingPrincipal), days
 }
 
 // 计算利息的规则
@@ -193,7 +196,6 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 	remainingPrincipal := loan.Principal
 	totalInterestPaid := 0.0
 	dueDate := loan.dueDate(loan.StartDate, loan.PaymentDueDay)
-
 	if loan.StartDate.Day() < loan.PaymentDueDay {
 		lprChangeMonth = loan.StartDate.Month()
 	} else {
@@ -214,12 +216,12 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 		/// 检查是否有提前还款需要处理
 
 		remainingPrincipal, days = loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
-
+		// 9.18 2691.16
 		// 更新每月还款本金
-		principalPayment := roundDecimalPlaces(remainingPrincipal / float64(loan.TermInMonths-loanTerm+1))
+		// principalPayment := roundDecimalPlaces(remainingPrincipal / float64(loan.TermInMonths-loanTerm+1))
+		principalPayment := round2(remainingPrincipal / float64(loan.TermInMonths-loanTerm+1))
 
 		// 以下处理每月正常还款
-
 		// 计算利息
 		//  第一个月的利息根据天数计算
 		if loanTerm == 1 {
@@ -240,18 +242,19 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			previousYearLPR := loan.getClosestLPRForYear(previousDueDate)
 
 			previousYearRate := previousYearLPR + loan.PlusSpread
-			interestPayment = roundDecimalPlaces(remainingPrincipal*previousYearRate/100/360) * float64(daysBefore)
+			interestPayment = round4(remainingPrincipal*previousYearRate/100/360) * float64(daysBefore)
 
 			// 当年利率 2023-05-25 ~ 2023-06-18
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR + loan.PlusSpread
-			interestPayment += roundDecimalPlaces(remainingPrincipal*currentYearRate/100/360) * float64(daysAfter)
+			interestPayment += round4(remainingPrincipal*currentYearRate/100/360) * float64(daysAfter)
 
 		} else {
 
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR + loan.PlusSpread
-			interestPayment = roundDecimalPlaces(remainingPrincipal * currentYearRate / 100 / 360 * float64(days))
+			// fmt.Println(edays)
+			interestPayment = round4(remainingPrincipal * currentYearRate / 100 / 360 * float64(days))
 
 		}
 
