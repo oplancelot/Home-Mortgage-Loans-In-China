@@ -7,9 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// NewFromFloat(5.45).StringFixed(2) // output: "5.45"
 // Loan represents the loan details.
-// 贷款输出项2位小数,利率6位小数(因为%是2位小数)
 
 type Loan struct {
 	Principal     decimal.Decimal // 初始本金
@@ -61,15 +59,6 @@ func parseDate(dateString string) time.Time {
 	}
 	return parsedTime
 }
-
-// // 取两位小数
-// func round4(value float64) float64 {
-// 	return math.Round(value*10000) / 10000
-// }
-
-// func round2(value float64) float64 {
-// 	return math.Round(value*100) / 100
-// }
 
 // 计算LPR变更当月执行不同利率的天数
 // 放款日	6.14		5.25		6.20
@@ -203,24 +192,12 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 
 	for loanTerm := 1; loanTerm <= loan.TermInMonths; loanTerm++ {
 		// 提取startDate和nextDueDate的月份和日期
-		// dueYear := dueDate.Year()
 		dueMonth := dueDate.Month()
-		// dueDay := dueDate.Day()
-
-		// startMonth := loan.StartDate.Month()
-		// startDay := loan.StartDate.Day()
-		// previousDueDate := previousDueDate(dueDate)
-
-		// 此处处理提前还款,在正常还款期前更新本金额
-		/// 检查是否有提前还款需要处理
 
 		remainingPrincipal, earlydays = loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
 		// 9.18 2691.16
-		// 更新每月还款本金
-		// principalPayment := roundDecimalPlaces(remainingPrincipal / float64(loan.TermInMonths-loanTerm+1))
-		// principalPayment := remainingPrincipal / float64(loan.TermInMonths-loanTerm+1)
+
 		remainTerm := loan.TermInMonths - loanTerm + 1
-		// principalPayment := remainingPrincipal.Div(loan.TermInMonths.Sub(decimal.NewFromInt(int64(loanTerm))).Add(decimal.NewFromInt(1)))
 		principalPayment := remainingPrincipal.Div(decimal.NewFromInt(int64(remainTerm)))
 
 		// 以下处理每月正常还款
@@ -234,7 +211,6 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			days := daysDiff(loan.StartDate, dueDate).Sub(decimal.NewFromInt(1))
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
-			// interestPayment = remainingPrincipal * currentYearRate / 100 / 360 * (float64(days))
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 
 		} else if dueMonth == lprChangeMonth {
@@ -244,33 +220,23 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)
 			previousDueDate := previousDueDate(dueDate)
 			previousYearLPR := loan.getClosestLPRForYear(previousDueDate)
-			// previousYearRate := previousYearLPR + loan.PlusSpread
 			previousYearRate := previousYearLPR.Add(loan.PlusSpread)
-			// interestPayment = (remainingPrincipal * previousYearRate / 100 / 360) * float64(daysBefore)
 			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore).Round(2)
 
 			// 当年利率 2023-05-25 ~ 2023-06-18
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
-			// currentYearRate = currentYearLPR + loan.PlusSpread
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
-			// interestPayment += (remainingPrincipal * currentYearRate / 100 / 360) * float64(daysAfter)
 			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(2)
 		} else {
 
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
-			// currentYearRate = currentYearLPR + loan.PlusSpread
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
-			// fmt.Println(edays)
-			// interestPayment = round4(remainingPrincipal * currentYearRate / 100 / 360 * float64(days-earlydays))
-
-			// interestPayment = remainingPrincipal * currentYearRate / 100 / 360 * (float64(days))
 			remainDay := days.Sub(earlydays)
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
 
 		}
 
 		remainingPrincipal = remainingPrincipal.Sub(principalPayment).Round(2)
-		// totalInterestPaid += interestPayment
 		totalInterestPaid = totalInterestPaid.Add(interestPayment).Round(2)
 
 		payment := Payment{
