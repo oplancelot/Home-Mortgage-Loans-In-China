@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -43,10 +44,82 @@ type EarlyRepayment struct {
 	Date   time.Time       // 提前还款日期
 }
 
-// PaymentWithIndex
-type PaymentWithIndex struct {
-	Index   int
-	Payment Payment
+// 创建一个新的结构体，包含 payments、loan 和 earlyRepayments 的字段
+type Report struct {
+	Index              int
+	LoanTerm           int             // 期数
+	Purpose            string          // 明细性质
+	Principal          decimal.Decimal // 本金部分
+	Interest           decimal.Decimal // 利息部分
+	MonthTotalAmount   decimal.Decimal // 当月还款总金额
+	RemainingPrincipal decimal.Decimal // 剩余本金
+	TotalInterestPaid  decimal.Decimal // 已支付总利息
+	DueDateRate        decimal.Decimal // 当月利率=lpr+加点
+	DueDate            time.Time       // 当月还款日期
+}
+
+func loan2Report(loan Loan, report []Report) []Report {
+	newReport := make([]Report, len(report)+1)
+	copy(newReport, report)
+	newReport[len(report)] = Report{
+		Index:              0,
+		Purpose:            "贷款发放",
+		Principal:          loan.Principal,
+		Interest:           decimal.NewFromInt(0),
+		MonthTotalAmount:   decimal.NewFromInt(0),
+		RemainingPrincipal: decimal.NewFromInt(0),
+		TotalInterestPaid:  decimal.NewFromInt(0),
+		DueDateRate:        loan.getClosestLPRForYear(loan.StartDate),
+		DueDate:            loan.StartDate,
+	}
+	return newReport
+}
+func early2Report(earlyRepayments []EarlyRepayment, report []Report) []Report {
+	newReport := make([]Report, len(report)+len(earlyRepayments))
+	copy(newReport, report)
+	for i, early := range earlyRepayments {
+		newReport[len(report)+i] = Report{
+			Index:              i,
+			Purpose:            "提前还款",
+			Principal:          early.Amount,
+			Interest:           decimal.NewFromInt(0),
+			MonthTotalAmount:   decimal.NewFromInt(0),
+			RemainingPrincipal: decimal.NewFromInt(0),
+			TotalInterestPaid:  decimal.NewFromInt(0),
+			DueDateRate:        decimal.NewFromInt(0),
+			DueDate:            early.Date,
+		}
+	}
+	return newReport
+}
+
+func payment2Report(payments []Payment, report []Report) []Report {
+	newReport := make([]Report, len(report)+len(payments))
+	copy(newReport, report)
+	for i, payment := range payments {
+		newReport[len(report)+i] = Report{
+			Index:              i,
+			Purpose:            "分期",
+			Principal:          payment.Principal,
+			Interest:           payment.Interest,
+			MonthTotalAmount:   payment.MonthTotalAmount,
+			RemainingPrincipal: payment.RemainingPrincipal,
+			TotalInterestPaid:  payment.TotalInterestPaid,
+			DueDateRate:        payment.DueDateRate,
+			DueDate:            payment.DueDate,
+		}
+
+	}
+	return newReport
+}
+func sortReports(reports []Report) {
+	sort.Slice(reports, func(i, j int) bool {
+		return reports[i].DueDate.Before(reports[j].DueDate)
+	})
+
+	for i := range reports {
+		reports[i].Index = i
+	}
 }
 
 // parseDate 解析日期字符串并返回时间。如果出现错误，将返回一个零值时间。
@@ -67,13 +140,13 @@ func parseDate(dateString string) time.Time {
 // 第一段	5.18~6.13	5.18~5.24	6.18~6.19
 // 第二段	6.14~6.17	5.25~6.17	6.20~7.17
 
-func previousDueDate(dueDate time.Time) time.Time {
+func (loan *Loan) previousDueDate(dueDate time.Time) time.Time {
 	previousMonth := dueDate.AddDate(0, -1, 0)
 	previousDueDate := time.Date(previousMonth.Year(), previousMonth.Month(), dueDate.Day(), 0, 0, 0, 0, dueDate.Location())
 	return previousDueDate
 }
 
-func daysDiff(startDate, endDate time.Time) decimal.Decimal {
+func (loan *Loan) daysDiff(startDate, endDate time.Time) decimal.Decimal {
 	// Calculate the difference in days
 	daysDiff := int(endDate.Sub(startDate).Hours() / 24)
 	return decimal.NewFromInt(int64(daysDiff))
@@ -85,10 +158,10 @@ func (loan *Loan) currentYearLPRUpdate(dueDate time.Time) (decimal.Decimal, deci
 	startDay := loan.StartDate.Day()
 
 	currentYearLPRUpdateDate := time.Date(dueYear, startMonth, startDay, 0, 0, 0, 0, loan.StartDate.Location())
-	previousDueDate := previousDueDate(dueDate)
+	previousDueDate := loan.previousDueDate(dueDate)
 
 	// lpr变更前的天数
-	daysBefore := daysDiff(previousDueDate, currentYearLPRUpdateDate)
+	daysBefore := loan.daysDiff(previousDueDate, currentYearLPRUpdateDate)
 	// fmt.Println(daysBefore)
 	daysAfter := decimal.NewFromInt(30).Sub(daysBefore)
 	return daysBefore, daysAfter
@@ -131,26 +204,13 @@ func (loan *Loan) getClosestLPRForYear(dueDate time.Time) decimal.Decimal {
 	return selectedRate
 }
 
-// Add contents of payments to IPaymentWithIndex slice
-func paymentsWithIndex(payments []Payment) []PaymentWithIndex {
-	ipayments := make([]PaymentWithIndex, len(payments))
-	for i, payment := range payments {
-		ipayment := PaymentWithIndex{
-			Index:   i,
-			Payment: payment,
-		}
-		ipayments[i] = ipayment
-	}
-	return ipayments
-}
-
 func (loan *Loan) makeEarlyRepayment(remainingPrincipal decimal.Decimal, earlyRepayments []EarlyRepayment, dueDate time.Time) (decimal.Decimal, decimal.Decimal) {
-	previousDueDate := previousDueDate(dueDate)
+	previousDueDate := loan.previousDueDate(dueDate)
 	for _, early := range earlyRepayments {
 		if early.Date.After(previousDueDate) && early.Date.Before(dueDate) {
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate := currentYearLPR.Add(loan.PlusSpread).Div(decimal.NewFromInt(100))
-			daysDiff := daysDiff(previousDueDate, early.Date)
+			daysDiff := loan.daysDiff(previousDueDate, early.Date)
 			earlyInterest := remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(360)).Mul(daysDiff)
 			remainingPrincipal = remainingPrincipal.Add(earlyInterest).Sub(early.Amount)
 			// fmt.Println(dueDate, currentYearRate, earlyInterest, remainingPrincipal, daysDiff)
@@ -179,7 +239,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 	var currentYearRate decimal.Decimal
 	var totalInterestPaid decimal.Decimal
 	var lprChangeMonth time.Month
-	var days, earlydays decimal.Decimal
+	var days, daysDiff decimal.Decimal
 	payments := make([]Payment, 0)
 	remainingPrincipal := loan.Principal
 	dueDate := loan.dueDate(loan.StartDate, loan.PaymentDueDay)
@@ -194,7 +254,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 		// 提取startDate和nextDueDate的月份和日期
 		dueMonth := dueDate.Month()
 
-		remainingPrincipal, earlydays = loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
+		remainingPrincipal, daysDiff = loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
 		// 9.18 2691.16
 
 		remainTerm := loan.TermInMonths - loanTerm + 1
@@ -208,7 +268,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			// 利率周期2022-05-18 ~ 2022-06-17 共30天
 			// 实际天数2022-05-26 ~ 2022-06-17 共23天
 			// days := int(dueDate.Sub(loan.StartDate).Hours() / 24)
-			days := daysDiff(loan.StartDate, dueDate).Sub(decimal.NewFromInt(1))
+			days := loan.daysDiff(loan.StartDate, dueDate).Sub(decimal.NewFromInt(1))
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
@@ -217,8 +277,9 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			// 利率变更月特殊处理 3657.38
 			// 分为两段
 			// 上一年利率 2023-05-18 ~ 2023-05-24
+			// 这里假设这个月不能提前还款/
 			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)
-			previousDueDate := previousDueDate(dueDate)
+			previousDueDate := loan.previousDueDate(dueDate)
 			previousYearLPR := loan.getClosestLPRForYear(previousDueDate)
 			previousYearRate := previousYearLPR.Add(loan.PlusSpread)
 			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore).Round(2)
@@ -231,7 +292,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
-			remainDay := days.Sub(earlydays)
+			remainDay := days.Sub(daysDiff)
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
 
 		}
@@ -340,14 +401,16 @@ func main() {
 	// 计算等额本金还款计划
 	payments := loan.loanRepaymentSchedule(earlyRepayments)
 
-	iPaymentWithIndex := paymentsWithIndex(payments)
+	// 输出
+	report := []Report{}
+	report = loan2Report(loan, report)
+	report = payment2Report(payments, report)
+	report = early2Report(earlyRepayments, report)
+	sortReports(report)
+	// row.printReport()
+	fmt.Printf("%-7s%-8s%-15s%-10s%-12s%-18s%-15s%-20s%-12s\n", "序号", "明细", "本金", "利息", "本月还款", "剩余本金", "已支付总利息", "本月利率", "日期")
 
-	// 输出iPaymentWithIndex的所有内容
-	fmt.Println("序号\t期数\t还款日期\t本金\t利息\t本月还款\t剩余本金\t已支付总利息\t本月利率")
-	for _, ip := range iPaymentWithIndex {
-		if ip.Index <= 40 {
-			fmt.Println(ip.Index, ip.Payment.LoanTerm, ip.Payment.DueDate.Format("2006-01-02"), ip.Payment.Principal, ip.Payment.Interest, ip.Payment.MonthTotalAmount, ip.Payment.RemainingPrincipal, ip.Payment.TotalInterestPaid, ip.Payment.DueDateRate)
-		}
+	for _, row := range report {
+		fmt.Printf("%-7d%-8s%-15s%-10s%-12s%-18s%-15s%-20s%-12s\n", row.Index, row.Purpose, row.Principal, row.Interest, row.MonthTotalAmount, row.RemainingPrincipal, row.TotalInterestPaid, row.DueDateRate, row.DueDate.Format("2006-01-02"))
 	}
-
 }
