@@ -329,12 +329,12 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			previousDueDate := loan.previousDueDate(dueDate)
 			previousYearLPR := loan.getClosestLPRForYear(previousDueDate)
 			previousYearRate := previousYearLPR.Add(loan.PlusSpread)
-			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore).Round(2)
+			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore).Round(4)
 
 			// 当年利率 2023-05-25 ~ 2023-06-18
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
 			currentYearRate = currentYearLPR.Add(loan.PlusSpread)
-			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(2)
+			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(4)
 		} else {
 
 			currentYearLPR := loan.getClosestLPRForYear(dueDate)
