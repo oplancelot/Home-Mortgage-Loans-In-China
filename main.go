@@ -133,9 +133,9 @@ func sortReports(reports []Report) {
 }
 
 func updateReports(reports []Report) {
-	for i := 2; i < len(reports); i++ {
+	for i := 1; i < len(reports); i++ {
 		reports[i].RemainingPrincipal = reports[i-1].RemainingPrincipal.Sub(reports[i].Principal)
-		reports[i].TotalInterestPaid = reports[i-1].Interest.Add(reports[i].Interest)
+		reports[i].TotalInterestPaid = reports[i-1].TotalInterestPaid.Add(reports[i].Interest)
 
 	}
 }
@@ -281,6 +281,8 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 	//	第二段为当年lpr,天数是30-第一段
 	// 5.提前还款会对下月的还款计算有影响
 	//	暂不考虑lpr变更这个月提前还款.
+	// 6.最后一期本金的计算特殊
+	//		最后一期本金 = 贷款金额 - 贷款金额/期数*(期数-1)
 
 	var interestPayment decimal.Decimal
 	var currentYearRate decimal.Decimal
