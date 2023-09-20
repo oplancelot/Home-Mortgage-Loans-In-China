@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -97,7 +96,7 @@ func early2Report(earlyRepayments []EarlyRepayment, report []Report) []Report {
 			DueDateRate:        early.DueDateRate,
 			DueDate:            early.Date,
 		}
-		fmt.Println(early.Date, early.Amount, early.Principal)
+		// fmt.Println(early.Date, early.Amount, early.Principal)
 	}
 	return newReport
 }
@@ -259,7 +258,7 @@ func (loan *Loan) makeEarlyRepayment(remainingPrincipal decimal.Decimal, earlyRe
 			early.Principal = early.Amount.Sub(earlyInterest).Round(2)
 			early.Interest = earlyInterest.Round(2)
 			early.RemainingPrincipal = remainingPrincipal.Round(2)
-			early.DueDateRate = currentYearRate.Round(2)
+			early.DueDateRate = currentYearRate.Mul(decimal.NewFromInt(100))
 			// 将更新后的 early 对象存储回 earlyRepayments 切片中
 			earlyRepayments[i] = early
 
