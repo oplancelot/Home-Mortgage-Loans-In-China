@@ -76,7 +76,7 @@ func loan2Report(loan Loan, report []Report) []Report {
 		MonthTotalAmount:   decimal.Zero,
 		RemainingPrincipal: loan.Principal,
 		TotalInterestPaid:  decimal.Zero,
-		DueDateRate:        loan.getClosestLPRForYear(loan.StartDate),
+		DueDateRate:        loan.getClosestLPRForYear(loan.StartDate).Add(loan.PlusSpread),
 		DueDate:            loan.StartDate,
 	}
 	return newReport
@@ -290,6 +290,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 	payments := make([]Payment, 0)
 	remainingPrincipal := loan.Principal
 	principalPayment := remainingPrincipal.Div(decimal.NewFromInt(int64(loan.TermInMonths))).Round(2)
+	lastPrincipalPayment := principalPayment.Add(remainingPrincipal.Sub(principalPayment.Mul(decimal.NewFromInt(int64(loan.TermInMonths)))))
 	dueDate := loan.dueDate(loan.StartDate, loan.PaymentDueDay)
 
 	// lpr变更月
@@ -309,8 +310,8 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 		if amount.Cmp(remainingPrincipal) == -1 {
 			remainTerm := loan.TermInMonths - loanTerm + 1
 			principalPayment = amount.Div(decimal.NewFromInt(int64(remainTerm))).Round(2)
+			lastPrincipalPayment = principalPayment.Add(amount.Sub(principalPayment.Mul(decimal.NewFromInt(int64(remainTerm)))))
 		}
-
 		// 以下处理每月正常还款
 		// 计算利率利息
 		interestPayment := decimal.Zero
@@ -357,9 +358,12 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(2)
 
 		case "C": // 最后一期
-			dueDate = loan.StartDate.AddDate(0, loanTerm, 0)
-			days = loan.daysDiff(loan.previousDueDate(dueDate), dueDate)
-			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
+			lastDueDate := loan.StartDate.AddDate(0, loanTerm, 0)
+			days = loan.daysDiff(loan.previousDueDate(dueDate), lastDueDate)
+			// fmt.Println(days, loan.previousDueDate(dueDate), dueDate)
+			principalPayment = lastPrincipalPayment.Round(2)
+			dueDate = lastDueDate
+			interestPayment = lastPrincipalPayment.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 
 		default:
 			remainDay := days.Sub(daysDiff)
@@ -385,11 +389,7 @@ func (loan *Loan) loanRepaymentSchedule(earlyRepayment []EarlyRepayment) []Payme
 		payments = append(payments, payment)
 
 		// 下一个还款日期
-		if loanTerm == loan.TermInMonths { // 最后一个月
-			dueDate = loan.StartDate.AddDate(0, loanTerm, 0)
-		} else { // 其他月
-			dueDate = dueDate.AddDate(0, 1, 0)
-		}
+		dueDate = dueDate.AddDate(0, 1, 0)
 
 	}
 
