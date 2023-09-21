@@ -81,7 +81,7 @@ func loan2Report(loan Loan, report []Report) []Report {
 	}
 	return newReport
 }
-func early2Report(earlyRepayments []EarlyRepayment, report []Report) []Report {
+func earlyRepayment2Report(earlyRepayments []EarlyRepayment, report []Report) []Report {
 	newReport := make([]Report, len(report)+len(earlyRepayments))
 	copy(newReport, report)
 	for i, early := range earlyRepayments {
@@ -101,7 +101,7 @@ func early2Report(earlyRepayments []EarlyRepayment, report []Report) []Report {
 	return newReport
 }
 
-func payment2Report(payments []MonthlyPayment, report []Report) []Report {
+func monthlyPayment2Report(payments []MonthlyPayment, report []Report) []Report {
 	newReport := make([]Report, len(report)+len(payments))
 	copy(newReport, report)
 	for i, payment := range payments {
@@ -438,8 +438,8 @@ func main() {
 	// 整理数据
 	report := []Report{}
 	report = loan2Report(loan, report)
-	report = payment2Report(payments, report)
-	report = early2Report(earlyRepayments, report)
+	report = monthlyPayment2Report(payments, report)
+	report = earlyRepayment2Report(earlyRepayments, report)
 	sortReport(report)
 	updateReport(report)
 
