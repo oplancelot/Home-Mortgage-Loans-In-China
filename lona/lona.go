@@ -1,7 +1,7 @@
 package lona
 
 import (
-	"os"
+	"bytes"
 	"sort"
 	"strconv"
 	"time"
@@ -140,8 +140,14 @@ func updateReport(reports []Report) {
 	}
 }
 
-func printReport(reports []Report) {
-	table := tablewriter.NewWriter(os.Stdout)
+func printReport(reports []Report) string {
+
+	// 创建一个 buffer 用于保存表格内容
+	var buffer bytes.Buffer
+
+	// 创建 tablewriter 实例
+	table := tablewriter.NewWriter(&buffer)
+	// 设置表格内容，可以调用 table.SetHeader()、table.Append() 等方法
 	table.SetHeader([]string{"序号", "期数", "明细", "日期", "本金", "利息", "本月还款", "剩余本金", "已支付总利息", "本月利率"})
 
 	for _, row := range reports {
@@ -158,8 +164,11 @@ func printReport(reports []Report) {
 			row.DueDateRate.String(),
 		})
 	}
-
+	// 渲染表格到 buffer 中
 	table.Render()
+
+	// 将 buffer 中的内容转换为字符串并返回
+	return buffer.String()
 }
 
 // parseDate 解析日期字符串并返回时间。如果出现错误，将返回一个零值时间。
@@ -355,7 +364,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 	return monthlypayments
 }
 
-func LonaPrintReport() {
+func LonaPrintReport() string {
 	// LPR
 	lpr := []LPR{
 		{parseDate("2023-08-21"), decimal.NewFromFloat(4.20)},
@@ -444,5 +453,7 @@ func LonaPrintReport() {
 	updateReport(report)
 
 	// printReport(report)
-	printReport(report)
+	p := printReport(report)
+
+	return p
 }

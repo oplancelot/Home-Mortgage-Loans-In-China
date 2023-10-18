@@ -21,7 +21,8 @@ func setupRouter() *gin.Engine {
 
 	// Ping test
 	r.GET("/lona", func(c *gin.Context) {
-		c.String(http.StatusOK, "lona")
+		p := lona.LonaPrintReport()
+		c.String(http.StatusOK, p)
 	})
 	// Get user value
 	r.GET("/user/:name", func(c *gin.Context) {
@@ -73,7 +74,7 @@ func setupRouter() *gin.Engine {
 }
 
 func main() {
-	lona.LonaPrintReport()
+	// lona.LonaPrintReport()
 	r := setupRouter()
 	// Listen and Server in 0.0.0.0:8080
 	r.Run(":8080")
