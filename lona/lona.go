@@ -364,7 +364,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 	return monthlypayments
 }
 
-func LonaPrintReport() string {
+func LonaPrintReport(initialPrincipal float64, loanTerm int, startDate string, plusSpread float64, paymentDueDay int, earlyRepaymentsAmount []float64, earlyRepaymentsDate []string) string {
 	// LPR
 	lpr := []LPR{
 		{parseDate("2023-08-21"), decimal.NewFromFloat(4.20)},
@@ -419,26 +419,32 @@ func LonaPrintReport() string {
 	}
 
 	// 输入贷款信息
-	initialPrincipal := decimal.NewFromFloat(920000.0) // 初始本金
-	defaultLPR := decimal.NewFromFloat(8.05)           // 年利率（百分比）
-	loanTerm := 360                                    // 贷款期限（月）
-	startDate := parseDate("2022-05-25")               // 放款日期
-	plusSpread := decimal.NewFromFloat(0.60)           // 上浮点数
-	paymentDueDay := 18                                // 还款日
+	// initialPrincipal = 920000.0 // 初始本金
+	// loanTerm = 360              // 贷款期限（月）
+	// startDate = "2022-05-25"    // 放款日期
+	// plusSpread = 0.60           // 上浮点数
+	// paymentDueDay = 18          // 还款日
 	// 创建 Loan 结构
 	loan := Loan{
-		InitialPrincipal: initialPrincipal,
-		InitialLPR:       defaultLPR,
+		InitialPrincipal: decimal.NewFromFloat(initialPrincipal),
+		InitialLPR:       decimal.NewFromFloat(4.45),
 		InitialTermI:     loanTerm,
-		InitialDate:      startDate,
+		InitialDate:      parseDate(startDate),
 		LPR:              lpr,
-		PlusSpread:       plusSpread,
+		PlusSpread:       decimal.NewFromFloat(plusSpread),
 		PaymentDueDay:    paymentDueDay,
 	}
 
 	// 输入提前还款信息
-	earlyRepayments := []EarlyRepayment{
-		{Amount: decimal.NewFromFloat(200000), Date: parseDate("2023-08-19")},
+	// earlyRepayments := []EarlyRepayment{
+	// 	{Amount: decimal.NewFromFloat(200000), Date: parseDate("2023-08-19")},
+	// }
+	earlyRepayments := make([]EarlyRepayment, len(earlyRepaymentsAmount))
+	for i := range earlyRepaymentsAmount {
+		earlyRepayments[i] = EarlyRepayment{
+			Amount: decimal.NewFromFloat(earlyRepaymentsAmount[i]),
+			Date:   parseDate(earlyRepaymentsDate[i]),
+		}
 	}
 
 	// 计算等额本金还款计划

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lona Report</title>
+    <style>
+      .container {
+        display: flex;
+        justify-content: space-between;
+        margin: 5%; /* 可根据需要调整外边距 */
+      }
+
+      .input-container {
+        width: 40%; /* 设置输入项容器的宽度 */
+      }
+
+      #result {
+        width: 55%; /* 设置结果容器的宽度 */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="input-container">
+        <form action="/lona" method="get">
+          <!-- 初始本金输入框 -->
+          <label for="principal">初始本金:</label>
+          <input
+            type="number"
+            id="principal"
+            name="principal"
+            value="{{ .Principal }}"
+            required
+          /><br /><br />
+
+          <!-- 贷款期限输入框 -->
+          <label for="loanTerm">贷款期限（月）:</label>
+          <input
+            type="number"
+            id="loanTerm"
+            name="loanTerm"
+            value="{{ .LoanTerm }}"
+            required
+          /><br /><br />
+
+          <!-- 放款日期输入框 -->
+          <label for="startDate">放款日期:</label>
+          <input
+            type="date"
+            id="startDate"
+            name="startDate"
+            value="{{ .StartDate }}"
+            required
+          /><br /><br />
+
+          <!-- 上浮点数输入框 -->
+          <label for="plusSpread">上浮点数:</label>
+          <input
+            type="number"
+            id="plusSpread"
+            name="plusSpread"
+            step="0.01"
+            value="{{ .PlusSpread }}"
+            required
+          /><br /><br />
+
+          <!-- 还款日输入框 -->
+          <label for="paymentDueDay">还款日:</label>
+          <input
+            type="number"
+            id="paymentDueDay"
+            name="paymentDueDay"
+            value="{{ .PaymentDueDay }}"
+            required
+          /><br /><br />
+
+          <label for="earlyRepayment1Amount">提前还款1金额:</label>
+          <input
+            type="number"
+            id="earlyRepayment1Amount"
+            name="earlyRepayment1Amount"
+            step="0.01"
+            value="{{ .earlyRepayment1Amount }}"
+          /><br /><br />
+
+          <label for="earlyRepayment1Date">提前还款1日期:</label>
+          <input
+            type="date"
+            id="earlyRepayment1Date"
+            name="earlyRepayment1Date"
+            value="{{ .earlyRepayment1Date }}"
+          /><br /><br />
+
+          <label for="earlyRepayment2Amount">提前还款2金额:</label>
+          <input
+            type="number"
+            id="earlyRepayment2Amount"
+            name="earlyRepayment2Amount"
+            step="0.01"
+            value="{{ .earlyRepayment2Amount }}"
+          /><br /><br />
+
+          <label for="earlyRepayment2Date">提前还款2日期:</label>
+          <input
+            type="date"
+            id="earlyRepayment2Date"
+            name="earlyRepayment2Date"
+            value="{{ .earlyRepayment2Date }}"
+          /><br /><br />
+
+          <label for="earlyRepayment3Amount">提前还款3金额:</label>
+          <input
+            type="number"
+            id="earlyRepayment3Amount"
+            name="earlyRepayment3Amount"
+            step="0.01"
+            value="{{ .earlyRepayment3Amount }}"
+          /><br /><br />
+
+          <label for="earlyRepayment3Date">提前还款3日期:</label>
+          <input
+            type="date"
+            id="earlyRepayment3Date"
+            name="earlyRepayment3Date"
+            value="{{ .earlyRepayment3Date }}"
+          /><br /><br />
+
+          <!-- 生成报表按钮 -->
+          <button type="submit">生成报表</button>
+          <!-- 清空按钮 -->
+          <button type="button" onclick="clearInputs()">清空输入项</button
+          ><br /><br />
+
+          <script>
+            function clearInputs() {
+              // 获取所有需要清空的输入框元素
+              var inputElements = document.querySelectorAll(
+                'input[type="number"], input[type="date"]'
+              );
+
+              // 循环遍历输入框并将其值设为空
+              inputElements.forEach(function (input) {
+                input.value = "";
+              });
+            }
+          </script>
+        </form>
+        <hr />
+      </div>
+
+      <!-- 显示报表结果 -->
+      <div id="result">
+        {{if .Report}}
+        <pre>{{ .Report }}</pre>
+        {{ end }}
+      </div>
+    </div>
+  </body>
+</html>
