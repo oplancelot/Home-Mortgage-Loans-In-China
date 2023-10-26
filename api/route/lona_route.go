@@ -1,26 +1,17 @@
-package main
+package route
 
 import (
-	"lona"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/oplancelot/Home-Mortgage-Loans-In-China/bootstrap"
+	"github.com/oplancelot/Home-Mortgage-Loans-In-China/internal/lona"
 )
 
-var db = make(map[string]string)
-
-func setupRouter() *gin.Engine {
-	// Disable Console Color
-	// gin.DisableConsoleColor()
-	r := gin.Default()
-
-	// Ping test
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(http.StatusOK, "pong")
-	})
-
-	r.GET("/lona", func(c *gin.Context) {
+func LonaRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup) {
+	group.GET("/lona", func(c *gin.Context) {
 
 		// 解析用户输入的数据
 		principal, _ := strconv.ParseFloat(c.DefaultQuery("principal", "0"), 64)
@@ -59,16 +50,4 @@ func setupRouter() *gin.Engine {
 		})
 
 	})
-	return r
 }
-
-func main() {
-	r := setupRouter()
-
-	r.LoadHTMLGlob("templates/*")
-
-	// Listen and Server in 0.0.0.0:8080
-	r.Run(":8080")
-}
-
-// http://127.0.0.1:8080/lona?principal=920000&loanTerm=360&startDate=2022-05-25&plusSpread=0.6&paymentDueDay=18&earlyRepayment1Amount=200000&earlyRepayment1Date=2023-08-19&earlyRepayment2Amount=0&earlyRepayment2Date=&earlyRepayment3Amount=0&earlyRepayment3Date=
