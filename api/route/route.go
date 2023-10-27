@@ -14,5 +14,5 @@ func Setup(env *bootstrap.Env, timeout time.Duration, gin *gin.Engine) {
 	publicRouter := gin.Group("")
 	// All Public APIs
 	PingRoute(env, timeout, publicRouter)
-	LonaRoute(env, timeout, publicRouter)
+	LoanRoute(env, timeout, publicRouter)
 }

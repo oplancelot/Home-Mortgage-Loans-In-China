@@ -7,12 +7,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/bootstrap"
-	"github.com/oplancelot/Home-Mortgage-Loans-In-China/internal/lona"
+	"github.com/oplancelot/Home-Mortgage-Loans-In-China/internal/loan"
 )
 
-func LonaRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup) {
+func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup) {
 
-	group.GET("/lona", func(c *gin.Context) {
+	group.GET("/loan", func(c *gin.Context) {
 
 		// 解析用户输入的数据
 		principal, _ := strconv.ParseFloat(c.DefaultQuery("principal", "0"), 64)
@@ -31,11 +31,11 @@ func LonaRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 		earlyRepayment3Amount, _ := strconv.ParseFloat(c.DefaultQuery("earlyRepayment3Amount", "0"), 64)
 		earlyRepayment3Date := c.DefaultQuery("earlyRepayment3Date", "")
 
-		// 调用 LonaPrintReport 函数生成报表
-		report := lona.LonaPrintReport(principal, loanTerm, startDate, plusSpread, paymentDueDay, []float64{earlyRepayment1Amount, earlyRepayment2Amount, earlyRepayment3Amount}, []string{earlyRepayment1Date, earlyRepayment2Date, earlyRepayment3Date})
+		// 调用 LoanPrintReport 函数生成报表
+		report := loan.LoanPrintReport(principal, loanTerm, startDate, plusSpread, paymentDueDay, []float64{earlyRepayment1Amount, earlyRepayment2Amount, earlyRepayment3Amount}, []string{earlyRepayment1Date, earlyRepayment2Date, earlyRepayment3Date})
 
 		// 将结果传递给模板进行渲染
-		c.HTML(http.StatusOK, "lona.tmpl", gin.H{
+		c.HTML(http.StatusOK, "loan.tmpl", gin.H{
 			"Principal":             principal,             // 从用户输入中获取的初始本金
 			"LoanTerm":              loanTerm,              // 从用户输入中获取的贷款期限
 			"StartDate":             startDate,             // 从用户输入中获取的放款日期
