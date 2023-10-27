@@ -10,7 +10,6 @@ import (
 
 func main() {
 	gin := gin.Default()
-	gin.LoadHTMLGlob("assets/templates/*")
 	env := bootstrap.NewEnv()
 	timeout := time.Duration(env.ContextTimeout) * time.Second
 	route.Setup(env, timeout, gin)
