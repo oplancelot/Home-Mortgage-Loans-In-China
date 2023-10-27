@@ -12,7 +12,7 @@ type Loan struct {
 	InitialPrincipal decimal.Decimal // 初始本金
 	InitialLPR       decimal.Decimal // 默认利率
 	PlusSpread       decimal.Decimal // 加点
-	InitialTermI     int             // 贷款期限（月）
+	InitialTerm      int             // 贷款期限（月）
 	InitialDate      time.Time       // 放款年月日
 	LPR              []LPR           // 日期与利率的条目列表
 	PaymentDueDay    int             // 还款日 (1-31)

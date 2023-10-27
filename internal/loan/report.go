@@ -132,72 +132,14 @@ func printReport(reports []Report) string {
 }
 
 func LoanPrintReport(initialPrincipal float64, loanTerm int, startDate string, plusSpread float64, paymentDueDay int, earlyRepaymentsAmount []float64, earlyRepaymentsDate []string) string {
-	// LPR
-	// lpr := []LPR{
-	// 	{parseDate("2023-08-21"), decimal.NewFromFloat(4.20)},
-	// 	{parseDate("2023-07-20"), decimal.NewFromFloat(4.20)},
-	// 	{parseDate("2023-06-20"), decimal.NewFromFloat(4.20)},
-	// 	{parseDate("2023-05-22"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2023-04-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2023-03-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2023-02-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2023-01-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2022-12-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2022-11-21"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2022-10-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2022-09-20"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2022-08-22"), decimal.NewFromFloat(4.30)},
-	// 	{parseDate("2022-07-20"), decimal.NewFromFloat(4.45)},
-	// 	{parseDate("2022-06-20"), decimal.NewFromFloat(4.45)},
-	// 	{parseDate("2022-05-20"), decimal.NewFromFloat(4.45)},
-	// 	{parseDate("2022-04-20"), decimal.NewFromFloat(4.60)},
-	// 	{parseDate("2022-03-21"), decimal.NewFromFloat(4.60)},
-	// 	{parseDate("2022-02-21"), decimal.NewFromFloat(4.60)},
-	// 	{parseDate("2022-01-20"), decimal.NewFromFloat(4.60)},
-	// 	{parseDate("2021-12-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-11-22"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-10-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-09-22"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-08-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-07-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-06-21"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-05-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-04-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-03-22"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-02-22"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2021-01-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-12-21"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-11-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-10-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-09-21"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-08-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-07-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-06-22"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-05-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-04-20"), decimal.NewFromFloat(4.65)},
-	// 	{parseDate("2020-03-20"), decimal.NewFromFloat(4.75)},
-	// 	{parseDate("2020-02-20"), decimal.NewFromFloat(4.75)},
-	// 	{parseDate("2020-01-20"), decimal.NewFromFloat(4.80)},
-	// 	{parseDate("2019-12-20"), decimal.NewFromFloat(4.80)},
-	// 	{parseDate("2019-11-20"), decimal.NewFromFloat(4.80)},
-	// 	{parseDate("2019-10-21"), decimal.NewFromFloat(4.85)},
-	// 	{parseDate("2019-09-20"), decimal.NewFromFloat(4.85)},
-	// 	{parseDate("2019-08-20"), decimal.NewFromFloat(4.85)},
-	// }
 
-	// 输入贷款信息
-	// initialPrincipal = 920000.0 // 初始本金
-	// loanTerm = 360              // 贷款期限（月）
-	// startDate = "2022-05-25"    // 放款日期
-	// plusSpread = 0.60           // 上浮点数
-	// paymentDueDay = 18          // 还款日
 	// 创建 Loan 结构
 	loan := Loan{
 		InitialPrincipal: decimal.NewFromFloat(initialPrincipal),
 		InitialLPR:       decimal.NewFromFloat(4.45),
-		InitialTermI:     loanTerm,
+		InitialTerm:     loanTerm,
 		InitialDate:      parseDate(startDate),
-		LPR:              Lprs,
+		LPR:              Lprs, // 常量
 		PlusSpread:       decimal.NewFromFloat(plusSpread),
 		PaymentDueDay:    paymentDueDay,
 	}
