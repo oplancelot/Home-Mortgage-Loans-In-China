@@ -1,9 +1,9 @@
 package loan
 
 import (
-	"bytes"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/olekukonko/tablewriter"
@@ -103,13 +103,9 @@ func updateReport(reports []Report) {
 
 func table(reports []Report) string {
 
-	// 创建一个 buffer 用于保存表格内容
-	var buffer bytes.Buffer
-
 	// 创建 tablewriter 实例
-	table := tablewriter.NewWriter(&buffer)
-	// 设置表格内容，可以调用 table.SetHeader()、table.Append() 等方法
-	table.SetHeader([]string{"序号", "期数", "明细", "日期", "本金", "利息", "本月还款", "剩余本金", "已支付总利息", "本月利率"})
+	tableString := &strings.Builder{}
+	table := tablewriter.NewWriter(tableString)
 
 	for _, row := range reports {
 		table.Append([]string{
@@ -126,10 +122,24 @@ func table(reports []Report) string {
 		})
 	}
 	// 渲染表格到 buffer 中
+	// 设置表格内容，可以调用 table.SetHeader()、table.Append() 等方法
+	table.SetHeader([]string{"序号", "期数", "明细", "日期", "本金", "利息", "本月还款   ", "剩余本金", "已支付总利息", "本月利率"})
+	table.SetAutoWrapText(true)
+	// table.SetAutoFormatHeaders(true)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetCenterSeparator("") // 表头和内容之间的分隔符
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetTablePadding("\t") // 列与列之间的分隔符
+	table.SetNoWhiteSpace(true)
+	table.SetColMinWidth(2, 10) // 设置列index的最小宽度,0表示第一列 和autoWrapText共同作用
+	table.SetColMinWidth(4, 12)
+	table.SetColMinWidth(5, 12)
 	table.Render()
 
-	// 将 buffer 中的内容转换为字符串并返回
-	return buffer.String()
+	// 输出为字符串
+	return tableString.String()
 }
 
 type Input struct {
