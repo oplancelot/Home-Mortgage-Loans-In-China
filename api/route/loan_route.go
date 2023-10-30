@@ -23,13 +23,13 @@ func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 
 		// 获取提前还款信息的值
 		earlyRepayment1Amount, _ := strconv.ParseFloat(c.DefaultQuery("earlyRepayment1Amount", "0"), 64)
-		earlyRepayment1Date := c.DefaultQuery("earlyRepayment1Date", "")
+		earlyRepayment1Date := c.DefaultQuery("earlyRepayment1Date", "2023-08-19")
 
 		earlyRepayment2Amount, _ := strconv.ParseFloat(c.DefaultQuery("earlyRepayment2Amount", "0"), 64)
-		earlyRepayment2Date := c.DefaultQuery("earlyRepayment2Date", "")
+		earlyRepayment2Date := c.DefaultQuery("earlyRepayment2Date", "2099-05-25")
 
 		earlyRepayment3Amount, _ := strconv.ParseFloat(c.DefaultQuery("earlyRepayment3Amount", "0"), 64)
-		earlyRepayment3Date := c.DefaultQuery("earlyRepayment3Date", "")
+		earlyRepayment3Date := c.DefaultQuery("earlyRepayment3Date", "2099-05-25")
 
 		// 调用 LoanPrintReport 函数生成报表
 		report := loan.LoanPrintReport(principal, loanTerm, startDate, plusSpread, paymentDueDay, []float64{earlyRepayment1Amount, earlyRepayment2Amount, earlyRepayment3Amount}, []string{earlyRepayment1Date, earlyRepayment2Date, earlyRepayment3Date})

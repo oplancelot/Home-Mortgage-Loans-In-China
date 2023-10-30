@@ -80,6 +80,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			// days := int(dueDate.Sub(loan.InitialDate).Hours() / 24)
 			days = loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
+			// fmt.Printf("interestPayment: %v\n", remainingPrincipal.Round(2))
 		case "B": // lpr变更月
 			// 分为两段
 			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)
