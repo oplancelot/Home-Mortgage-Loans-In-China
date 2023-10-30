@@ -3,7 +3,7 @@ package loan
 
 import "time"
 
-func parseDate(dateString string) time.Time {
+func ParseDate(dateString string) time.Time {
 	layout := "2006-01-02" // 统一的日期布局字符串
 	parsedTime, err := time.Parse(layout, dateString)
 	if err != nil {

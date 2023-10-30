@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/bootstrap"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/internal/loan"
+	"github.com/shopspring/decimal"
 )
 
 func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup) {
@@ -31,8 +32,34 @@ func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 		earlyRepayment3Amount, _ := strconv.ParseFloat(c.DefaultQuery("earlyRepayment3Amount", "0"), 64)
 		earlyRepayment3Date := c.DefaultQuery("earlyRepayment3Date", "2099-05-25")
 
+		// 创建 Loan 和 EarlyRepayment 的实例
+		// 创建 Loan 结构
+		originialloan := loan.Loan{
+			InitialPrincipal: decimal.NewFromFloat(principal),
+			InitialLPR:       decimal.NewFromFloat(4.45),
+			InitialTerm:      loanTerm,
+			InitialDate:      loan.ParseDate(startDate),
+			LPR:              loan.Lprs, // 常量
+			PlusSpread:       decimal.NewFromFloat(plusSpread),
+			PaymentDueDay:    paymentDueDay,
+		}
+
+		// 输入提前还款信息
+		earlyRepayments := []loan.EarlyRepayment{
+			{Amount: decimal.NewFromFloat(earlyRepayment1Amount), Date: loan.ParseDate(earlyRepayment1Date)},
+			{Amount: decimal.NewFromFloat(earlyRepayment2Amount), Date: loan.ParseDate(earlyRepayment2Date)},
+			{Amount: decimal.NewFromFloat(earlyRepayment3Amount), Date: loan.ParseDate(earlyRepayment3Date)},
+		}
+		// earlyRepayments := []EarlyRepayment{}
+
+		// 创建 Input 结构体并赋值
+		inputData := loan.Input{
+			Loan:           originialloan,
+			EarlyRepayment: earlyRepayments,
+		}
+
 		// 调用 LoanPrintReport 函数生成报表
-		report := loan.LoanPrintReport(principal, loanTerm, startDate, plusSpread, paymentDueDay, []float64{earlyRepayment1Amount, earlyRepayment2Amount, earlyRepayment3Amount}, []string{earlyRepayment1Date, earlyRepayment2Date, earlyRepayment3Date})
+		report := loan.LoanPrintReport(inputData)
 
 		// 将结果传递给模板进行渲染
 		c.HTML(http.StatusOK, "loan.tmpl", gin.H{

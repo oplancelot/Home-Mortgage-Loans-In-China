@@ -94,14 +94,14 @@ func sortReport(reports []Report) {
 
 func updateReport(reports []Report) {
 	for i := 1; i < len(reports); i++ {
-		
+
 		reports[i].RemainingPrincipal = reports[i-1].RemainingPrincipal.Sub(reports[i].Principal)
 		reports[i].TotalInterestPaid = reports[i-1].TotalInterestPaid.Add(reports[i].Interest)
 
 	}
 }
 
-func printReport(reports []Report) string {
+func table(reports []Report) string {
 
 	// 创建一个 buffer 用于保存表格内容
 	var buffer bytes.Buffer
@@ -132,44 +132,51 @@ func printReport(reports []Report) string {
 	return buffer.String()
 }
 
-func LoanPrintReport(initialPrincipal float64, loanTerm int, startDate string, plusSpread float64, paymentDueDay int, earlyRepaymentsAmount []float64, earlyRepaymentsDate []string) string {
+type Input struct {
+	Loan           Loan
+	EarlyRepayment []EarlyRepayment
+}
+
+// func LoanPrintReport(initialPrincipal float64, loanTerm int, startDate string, plusSpread float64, paymentDueDay int, earlyRepaymentsAmount []float64, earlyRepaymentsDate []string) string {
+func LoanPrintReport(inputdata Input) string {
 
 	// 创建 Loan 结构
-	loan := Loan{
-		InitialPrincipal: decimal.NewFromFloat(initialPrincipal),
-		InitialLPR:       decimal.NewFromFloat(4.45),
-		InitialTerm:      loanTerm,
-		InitialDate:      parseDate(startDate),
-		LPR:              Lprs, // 常量
-		PlusSpread:       decimal.NewFromFloat(plusSpread),
-		PaymentDueDay:    paymentDueDay,
-	}
+	// loan := Loan{
+	// 	InitialPrincipal: decimal.NewFromFloat(initialPrincipal),
+	// 	InitialLPR:       decimal.NewFromFloat(4.45),
+	// 	InitialTerm:      loanTerm,
+	// 	InitialDate:      parseDate(startDate),
+	// 	LPR:              Lprs, // 常量
+	// 	PlusSpread:       decimal.NewFromFloat(plusSpread),
+	// 	PaymentDueDay:    paymentDueDay,
+	// }
 
 	// 输入提前还款信息
 	// earlyRepayments := []EarlyRepayment{
 	// 	{Amount: decimal.NewFromFloat(200000), Date: parseDate("2023-08-19")},
 	// }
-	earlyRepayments := make([]EarlyRepayment, len(earlyRepaymentsAmount))
-	for i := range earlyRepaymentsAmount {
-		earlyRepayments[i] = EarlyRepayment{
-			Amount: decimal.NewFromFloat(earlyRepaymentsAmount[i]),
-			Date:   parseDate(earlyRepaymentsDate[i]),
-		}
-	}
+	// earlyRepayments := make([]EarlyRepayment, len(earlyRepaymentsAmount))
+	// for i := range earlyRepaymentsAmount {
+	// 	earlyRepayments[i] = EarlyRepayment{
+	// 		Amount: decimal.NewFromFloat(earlyRepaymentsAmount[i]),
+	// 		Date:   parseDate(earlyRepaymentsDate[i]),
+	// 	}
+	// }
 
 	// 计算等额本金还款计划
-	payments := loan.EqualPrincipalPaymentPlan(earlyRepayments)
+	// payments := loan.EqualPrincipalPaymentPlan(earlyRepayments)
+	payments := inputdata.Loan.EqualPrincipalPaymentPlan(inputdata.EarlyRepayment)
 
 	// 整理数据
 	report := []Report{}
-	report = loan2Report(loan, report)
+	report = loan2Report(inputdata.Loan, report)
 	report = monthlyPayment2Report(payments, report)
-	report = earlyRepayment2Report(earlyRepayments, report)
+	report = earlyRepayment2Report(inputdata.EarlyRepayment, report)
 	sortReport(report)
 	updateReport(report)
 
 	// printReport(report)
-	p := printReport(report)
+	p := table(report)
 
 	return p
 }
