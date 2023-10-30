@@ -125,7 +125,7 @@ func table(reports []Report) string {
 	// 设置表格内容，可以调用 table.SetHeader()、table.Append() 等方法
 	table.SetHeader([]string{"序号", "期数", "明细", "日期", "本金", "利息", "本月还款   ", "剩余本金", "已支付总利息", "本月利率"})
 	table.SetAutoWrapText(true)
-	// table.SetAutoFormatHeaders(true)
+	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetCenterSeparator("") // 表头和内容之间的分隔符
