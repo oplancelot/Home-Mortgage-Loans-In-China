@@ -140,31 +140,7 @@ type Input struct {
 // func LoanPrintReport(initialPrincipal float64, loanTerm int, startDate string, plusSpread float64, paymentDueDay int, earlyRepaymentsAmount []float64, earlyRepaymentsDate []string) string {
 func LoanPrintReport(inputdata Input) string {
 
-	// 创建 Loan 结构
-	// loan := Loan{
-	// 	InitialPrincipal: decimal.NewFromFloat(initialPrincipal),
-	// 	InitialLPR:       decimal.NewFromFloat(4.45),
-	// 	InitialTerm:      loanTerm,
-	// 	InitialDate:      parseDate(startDate),
-	// 	LPR:              Lprs, // 常量
-	// 	PlusSpread:       decimal.NewFromFloat(plusSpread),
-	// 	PaymentDueDay:    paymentDueDay,
-	// }
-
-	// 输入提前还款信息
-	// earlyRepayments := []EarlyRepayment{
-	// 	{Amount: decimal.NewFromFloat(200000), Date: parseDate("2023-08-19")},
-	// }
-	// earlyRepayments := make([]EarlyRepayment, len(earlyRepaymentsAmount))
-	// for i := range earlyRepaymentsAmount {
-	// 	earlyRepayments[i] = EarlyRepayment{
-	// 		Amount: decimal.NewFromFloat(earlyRepaymentsAmount[i]),
-	// 		Date:   parseDate(earlyRepaymentsDate[i]),
-	// 	}
-	// }
-
 	// 计算等额本金还款计划
-	// payments := loan.EqualPrincipalPaymentPlan(earlyRepayments)
 	payments := inputdata.Loan.EqualPrincipalPaymentPlan(inputdata.EarlyRepayment)
 
 	// 整理数据

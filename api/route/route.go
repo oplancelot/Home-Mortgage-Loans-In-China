@@ -8,7 +8,7 @@ import (
 )
 
 func Setup(env *bootstrap.Env, timeout time.Duration, gin *gin.Engine) {
-
+	// 载入assets
 	gin.Static("/static", "assets/static")
 	gin.LoadHTMLGlob("assets/templates/*")
 	publicRouter := gin.Group("")

@@ -45,12 +45,21 @@ func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 		}
 
 		// 输入提前还款信息
+
+		// earlyRepayments := make([]EarlyRepayment, len(earlyRepaymentsAmount))
+		// for i := range earlyRepaymentsAmount {
+		// 	earlyRepayments[i] = EarlyRepayment{
+		// 		Amount: decimal.NewFromFloat(earlyRepaymentsAmount[i]),
+		// 		Date:   parseDate(earlyRepaymentsDate[i]),
+		// 	}
+		// }
+
+		// 输入提前还款信息
 		earlyRepayments := []loan.EarlyRepayment{
 			{Amount: decimal.NewFromFloat(earlyRepayment1Amount), Date: loan.ParseDate(earlyRepayment1Date)},
 			{Amount: decimal.NewFromFloat(earlyRepayment2Amount), Date: loan.ParseDate(earlyRepayment2Date)},
 			{Amount: decimal.NewFromFloat(earlyRepayment3Amount), Date: loan.ParseDate(earlyRepayment3Date)},
 		}
-		// earlyRepayments := []EarlyRepayment{}
 
 		// 创建 Input 结构体并赋值
 		inputData := loan.Input{
