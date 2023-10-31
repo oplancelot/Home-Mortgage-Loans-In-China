@@ -1,6 +1,7 @@
 package loan
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -46,6 +47,8 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 
 	for loanTerm := 1; loanTerm <= loan.InitialTerm; loanTerm++ {
 
+		interestPayment := decimal.Zero
+		days := decimal.NewFromInt(int64(30))
 		// 计算如果有提前还款则需要减去提前还款的本金
 		amount, daysDiff := loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
 		// 只在提前还款后,重新计算每月应还本金;否则多次计算会有小数点导致的差异
@@ -53,12 +56,13 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			remainTerm := loan.InitialTerm - loanTerm + 1
 			principalPayment = amount.Div(decimal.NewFromInt(int64(remainTerm))).Round(2)
 			lastPrincipalPayment = principalPayment.Add(amount.Sub(principalPayment.Mul(decimal.NewFromInt(int64(remainTerm)))))
+
 		}
+
+		remainingPrincipal = amount
 		// 以下处理每月正常还款
 		// 计算利率利息
-		interestPayment := decimal.Zero
 		currentYearRate := loan.getClosestLPRForYear(dueDate).Add(loan.PlusSpread)
-		days := decimal.NewFromInt(int64(30))
 
 		var repaymentStatus string
 		if loanTerm == 1 { // 第一期
@@ -80,7 +84,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			// days := int(dueDate.Sub(loan.InitialDate).Hours() / 24)
 			days = loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
-			// fmt.Printf("interestPayment: %v\n", remainingPrincipal.Round(2))
+			fmt.Printf("interestPayment: %v\n%v\n", interestPayment.Round(2), remainingPrincipal)
 		case "B": // lpr变更月
 			// 分为两段
 			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)
@@ -104,13 +108,12 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 		default:
 			remainDay := days.Sub(daysDiff)
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
-
+			// if loanTerm <= 20 {
+			// 	fmt.Printf("interestPayment: %v\n%v\n", interestPayment.Round(2), days)
+			// }
 		}
 
 		remainingPrincipal = remainingPrincipal.Sub(principalPayment).Round(2)
-
-		totalInterestPaid := decimal.Zero
-		totalInterestPaid = totalInterestPaid.Add(interestPayment).Round(2)
 
 		payment := MonthlyPayment{
 			LoanTerm:           loanTerm,
@@ -118,7 +121,6 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			Interest:           interestPayment,
 			MonthTotalAmount:   principalPayment.Add(interestPayment),
 			RemainingPrincipal: remainingPrincipal,
-			TotalInterestPaid:  totalInterestPaid,
 			DueDateRate:        currentYearRate,
 			DueDate:            dueDate,
 		}

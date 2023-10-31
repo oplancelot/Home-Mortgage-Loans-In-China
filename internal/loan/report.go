@@ -95,7 +95,7 @@ func sortReport(reports []Report) {
 func updateReport(reports []Report) {
 	for i := 1; i < len(reports); i++ {
 
-		reports[i].RemainingPrincipal = reports[i-1].RemainingPrincipal.Sub(reports[i].Principal)
+		// reports[i].RemainingPrincipal = reports[i-1].RemainingPrincipal.Sub(reports[i].Principal)
 		reports[i].TotalInterestPaid = reports[i-1].TotalInterestPaid.Add(reports[i].Interest)
 
 	}
