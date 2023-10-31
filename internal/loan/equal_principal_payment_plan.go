@@ -100,7 +100,6 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 		case "C": // 最后一期
 			lastDueDate := loan.InitialDate.AddDate(0, loanTerm, 0)
 			days = loan.daysDiff(loan.previousDueDate(dueDate), lastDueDate)
-			// fmt.Println(days, loan.previousDueDate(dueDate), dueDate)
 			principalPayment = lastPrincipalPayment.Round(2)
 			dueDate = lastDueDate
 			interestPayment = lastPrincipalPayment.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
@@ -108,9 +107,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 		default:
 			remainDay := days.Sub(daysDiff)
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
-			// if loanTerm <= 20 {
-			// 	fmt.Printf("interestPayment: %v\n%v\n", interestPayment.Round(2), days)
-			// }
+
 		}
 
 		remainingPrincipal = remainingPrincipal.Sub(principalPayment).Round(2)
