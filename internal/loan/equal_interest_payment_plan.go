@@ -6,19 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Payment represents the details of each monthly payment.
-type MonthlyPayment struct {
-	LoanTerm           int             // 期数
-	Principal          decimal.Decimal // 本金部分（固定为每月还款金额）
-	Interest           decimal.Decimal // 利息部分
-	MonthTotalAmount   decimal.Decimal // 当月还款总金额
-	RemainingPrincipal decimal.Decimal // 剩余本金
-	TotalInterestPaid  decimal.Decimal // 已支付总利息
-	DueDateRate        decimal.Decimal // 当月利率=lpr+加点
-	DueDate            time.Time       // 当月还款日期
-}
-
-func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []MonthlyPayment {
+func (loan *Loan) EqualInterrestPaymentPlan(earlyRepayment []EarlyRepayment) []MonthlyPayment {
 	// 计算利息的规则
 
 	// 1.天数:全年360天,12个月每月30天
@@ -83,7 +71,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			// days := int(dueDate.Sub(loan.InitialDate).Hours() / 24)
 			days = loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
-			// fmt.Printf("principal")
+			// fmt.Printf("interest")
 		case "B": // lpr变更月
 			// 分为两段
 			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)

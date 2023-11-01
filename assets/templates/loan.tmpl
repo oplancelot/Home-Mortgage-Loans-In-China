@@ -10,7 +10,7 @@
   <body>
     <header id="header">
       <div class="innertube">
-        <h1>等额本金</h1>
+        <h1>还款计划</h1>
       </div>
     </header>
 
@@ -132,8 +132,12 @@
               value="{{ .earlyRepayment3Date }}"
             /><br /><br />
 
-            <!-- 生成报表按钮 -->
-            <button type="submit">生成报表</button>
+            <button type="submit" name="action" value="principal">
+              等额本金
+            </button>
+            <button type="submit" name="action" value="interest">
+              等额本息
+            </button>
             <!-- 清空按钮 -->
             <button type="button" onclick="clearInputs()">清空输入项</button
             ><br /><br />

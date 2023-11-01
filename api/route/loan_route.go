@@ -12,6 +12,13 @@ import (
 )
 
 func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup) {
+	// println("api/route/loan_route.go")
+	// group.GET("/loan", func(c *gin.Context) {
+	// 	// c.String(http.StatusOK, "loan")
+	// 	c.HTML(http.StatusOK, "loan.tmpl", gin.H{
+	// 		"title": "Loan",
+	// 	})
+	// })
 
 	group.GET("/loan", func(c *gin.Context) {
 
@@ -33,7 +40,6 @@ func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 		earlyRepayment3Date := c.DefaultQuery("earlyRepayment3Date", "2099-05-25")
 
 		// 创建 Loan 和 EarlyRepayment 的实例
-		// 创建 Loan 结构
 		originialloan := loan.Loan{
 			InitialPrincipal: decimal.NewFromFloat(principal),
 			InitialLPR:       decimal.NewFromFloat(4.45),
@@ -43,16 +49,6 @@ func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 			PlusSpread:       decimal.NewFromFloat(plusSpread),
 			PaymentDueDay:    paymentDueDay,
 		}
-
-		// 输入提前还款信息
-
-		// earlyRepayments := make([]EarlyRepayment, len(earlyRepaymentsAmount))
-		// for i := range earlyRepaymentsAmount {
-		// 	earlyRepayments[i] = EarlyRepayment{
-		// 		Amount: decimal.NewFromFloat(earlyRepaymentsAmount[i]),
-		// 		Date:   parseDate(earlyRepaymentsDate[i]),
-		// 	}
-		// }
 
 		// 输入提前还款信息
 		earlyRepayments := []loan.EarlyRepayment{
@@ -66,11 +62,12 @@ func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup
 			Loan:           originialloan,
 			EarlyRepayment: earlyRepayments,
 		}
-
-		// 调用 LoanPrintReport 函数生成报表
-		report := loan.LoanPrintReport(inputData)
+		// fmt.Println(inputData)
+		action := c.Query("action")
+		report := loan.LoanPrintReport(inputData, action)
 
 		// 将结果传递给模板进行渲染
+
 		c.HTML(http.StatusOK, "loan.tmpl", gin.H{
 			"Principal":             principal,             // 从用户输入中获取的初始本金
 			"LoanTerm":              loanTerm,              // 从用户输入中获取的贷款期限

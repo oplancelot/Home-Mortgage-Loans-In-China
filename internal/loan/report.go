@@ -147,12 +147,17 @@ type Input struct {
 	EarlyRepayment []EarlyRepayment
 }
 
-// func LoanPrintReport(initialPrincipal float64, loanTerm int, startDate string, plusSpread float64, paymentDueDay int, earlyRepaymentsAmount []float64, earlyRepaymentsDate []string) string {
-func LoanPrintReport(inputdata Input) string {
+func LoanPrintReport(inputdata Input, action string) string {
+	var payments []MonthlyPayment
+	if action == "principal" {
+		// 计算等额本金还款计划
+		payments = inputdata.Loan.EqualPrincipalPaymentPlan(inputdata.EarlyRepayment)
 
-	// 计算等额本金还款计划
-	payments := inputdata.Loan.EqualPrincipalPaymentPlan(inputdata.EarlyRepayment)
+	} else {
+		// 计算等额本息还款计划
+		payments = inputdata.Loan.EqualInterrestPaymentPlan(inputdata.EarlyRepayment)
 
+	}
 	// 整理数据
 	report := []Report{}
 	report = loan2Report(inputdata.Loan, report)
