@@ -10,7 +10,6 @@ import (
 
 type Loan struct {
 	InitialPrincipal decimal.Decimal // 初始本金
-	InitialLPR       decimal.Decimal // 默认利率
 	PlusSpread       decimal.Decimal // 加点
 	InitialTerm      int             // 贷款期限（月）
 	InitialDate      time.Time       // 放款年月日
