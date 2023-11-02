@@ -6,7 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (loan *Loan) EqualInterrestPaymentPlan(earlyRepayment []EarlyRepayment) []MonthlyPayment {
+func (loan *Loan) EqualInstallmentPaymentPlan(earlyRepayment []EarlyRepayment) []MonthlyPayment {
 	// 计算利息的规则
 
 	// 1.天数:全年360天,12个月每月30天
