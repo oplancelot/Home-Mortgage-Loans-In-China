@@ -155,7 +155,7 @@ func LoanPrintReport(inputdata Input, action string) string {
 
 	} else {
 		// 计算等额本息还款计划
-		payments = inputdata.Loan.EqualInterrestPaymentPlan(inputdata.EarlyRepayment)
+		payments = inputdata.Loan.EqualInstallmentPaymentPlan(inputdata.EarlyRepayment)
 
 	}
 	// 整理数据

@@ -11,7 +11,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func parseFormData(c *gin.Context) (inputData loan.Input, err error) {
+func parseFormData(c *gin.Context) (inputData loan.Input, action string, err error) {
+	action = c.PostForm("action")
 	principal, _ := strconv.ParseFloat(c.DefaultPostForm("principal", "0"), 64)
 	loanTerm, _ := strconv.Atoi(c.DefaultPostForm("loanTerm", "12"))
 	startDate := c.DefaultPostForm("startDate", "2022-05-25")
@@ -44,7 +45,7 @@ func parseFormData(c *gin.Context) (inputData loan.Input, err error) {
 		},
 	}
 
-	return inputData, nil
+	return inputData, action, nil
 }
 func renderTemplate(c *gin.Context, inputData loan.Input, report string) {
 	c.HTML(http.StatusOK, "loan.tmpl", gin.H{
@@ -64,7 +65,7 @@ func renderTemplate(c *gin.Context, inputData loan.Input, report string) {
 }
 
 func handleGETRequest(c *gin.Context) {
-	inputData, err := parseFormData(c)
+	inputData, _, err := parseFormData(c)
 	if err != nil {
 		// 处理错误...
 		return
@@ -73,14 +74,12 @@ func handleGETRequest(c *gin.Context) {
 }
 
 func handlePOSTRequest(c *gin.Context) {
-	inputData, err := parseFormData(c)
+	inputData, action, err := parseFormData(c)
 	if err != nil {
 		// 处理错误...
 		return
 	}
 
-	// 计算还款计划
-	action := c.Query("action")
 	report := loan.LoanPrintReport(inputData, action)
 
 	// 使用 renderTemplate 函数渲染模板
@@ -88,6 +87,8 @@ func handlePOSTRequest(c *gin.Context) {
 }
 
 func LoanRoute(env *bootstrap.Env, timeout time.Duration, group *gin.RouterGroup) {
+	// 计算还款计划
+
 	group.GET("/loan", handleGETRequest)
 	group.POST("/loan", handlePOSTRequest)
 
