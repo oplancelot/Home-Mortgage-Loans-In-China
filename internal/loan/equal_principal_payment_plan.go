@@ -18,6 +18,20 @@ type MonthlyPayment struct {
 	DueDate            time.Time       // 当月还款日期
 }
 
+// !EPP 是  "Equal Principal Payments"  的缩写，意思是等额本息。
+// 在等额本金还款方式下，贷款人每个月偿还的本金金额是固定的，而利息金额会随着剩余本金的减少而逐渐减少。
+
+// 等额本息计算公式
+// "Principal and Interest Payment" 的常见缩写是 P&I Payment
+// P&I Payment=PP+IP
+// PP= P/n
+// PP 是每月应还本金Principal Payment
+// Principal 是贷款本金简写P
+// n 是还款总期数
+//
+// RLPRemaining Loan Principal
+// MIR=Monthly Interest Rate 月利率
+// 年利率Annual Interest Rate = AIR
 func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []MonthlyPayment {
 	// 计算利息的规则
 
@@ -43,11 +57,9 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 	principalPayment := remainingPrincipal.Div(decimal.NewFromInt(int64(loan.InitialTerm))).Round(2)
 	lastPrincipalPayment := principalPayment.Add(remainingPrincipal.Sub(principalPayment.Mul(decimal.NewFromInt(int64(loan.InitialTerm)))))
 	dueDate := time.Date(loan.InitialDate.Year(), loan.InitialDate.Month()+1, loan.PaymentDueDay, 0, 0, 0, 0, loan.InitialDate.Location())
-	days := decimal.NewFromInt(int64(30))
-	interestPayment := decimal.Zero
 
 	for loanTerm := 1; loanTerm <= loan.InitialTerm; loanTerm++ {
-
+		interestPayment := decimal.Zero
 		// 计算如果有提前还款则需要减去提前还款的本金
 		amount, daysDiff := loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
 		// 只在提前还款后,重新计算每月应还本金;否则多次计算会有小数点导致的差异
@@ -69,7 +81,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			// 利率周期2022-05-18 ~ 2022-06-17 共30天
 			// 实际天数2022-05-26 ~ 2022-06-17 共23天
 			// days := int(dueDate.Sub(loan.InitialDate).Hours() / 24)
-			days = loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
+			days := loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 			// fmt.Printf("principal")
 		case loanTerm%12 == 1: // lpr变更月
@@ -86,13 +98,13 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 
 		case loanTerm == loan.InitialTerm: // 最后一期
 			lastDueDate := loan.InitialDate.AddDate(0, loanTerm, 0)
-			days = loan.daysDiff(loan.previousDueDate(dueDate), lastDueDate)
+			days := loan.daysDiff(loan.previousDueDate(dueDate), lastDueDate)
 			principalPayment = lastPrincipalPayment.Round(2)
 			dueDate = lastDueDate
 			interestPayment = lastPrincipalPayment.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 
 		default:
-			remainDay := days.Sub(daysDiff)
+			remainDay := decimal.NewFromInt(int64(30)).Sub(daysDiff)
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
 
 		}
