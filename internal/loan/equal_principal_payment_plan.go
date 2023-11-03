@@ -43,11 +43,11 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 	principalPayment := remainingPrincipal.Div(decimal.NewFromInt(int64(loan.InitialTerm))).Round(2)
 	lastPrincipalPayment := principalPayment.Add(remainingPrincipal.Sub(principalPayment.Mul(decimal.NewFromInt(int64(loan.InitialTerm)))))
 	dueDate := time.Date(loan.InitialDate.Year(), loan.InitialDate.Month()+1, loan.PaymentDueDay, 0, 0, 0, 0, loan.InitialDate.Location())
+	days := decimal.NewFromInt(int64(30))
+	interestPayment := decimal.Zero
 
 	for loanTerm := 1; loanTerm <= loan.InitialTerm; loanTerm++ {
 
-		interestPayment := decimal.Zero
-		days := decimal.NewFromInt(int64(30))
 		// 计算如果有提前还款则需要减去提前还款的本金
 		amount, daysDiff := loan.makeEarlyRepayment(remainingPrincipal, earlyRepayment, dueDate)
 		// 只在提前还款后,重新计算每月应还本金;否则多次计算会有小数点导致的差异
@@ -71,8 +71,6 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 		} else if loanTerm == loan.InitialTerm { // 最后一期
 			repaymentStatus = "C"
 
-		} else {
-			repaymentStatus = "D" // 默认
 		}
 
 		switch repaymentStatus {

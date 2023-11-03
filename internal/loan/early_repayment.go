@@ -40,5 +40,5 @@ func (loan *Loan) makeEarlyRepayment(remainingPrincipal decimal.Decimal, earlyRe
 		}
 	}
 	// 如果本期没有提前还款没有则返回原值
-	return remainingPrincipal, decimal.Decimal{}
+	return remainingPrincipal, decimal.Zero
 }
