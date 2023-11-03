@@ -63,18 +63,8 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 		// 计算利率利息
 		currentYearRate := loan.getClosestLPRForYear(dueDate).Add(loan.PlusSpread)
 
-		var repaymentStatus string
-		if loanTerm == 1 { // 第一期
-			repaymentStatus = "A"
-		} else if loanTerm%12 == 1 { // lpr变更月
-			repaymentStatus = "B"
-		} else if loanTerm == loan.InitialTerm { // 最后一期
-			repaymentStatus = "C"
-
-		}
-
-		switch repaymentStatus {
-		case "A": // 第一期
+		switch {
+		case loanTerm == 1: // 第一期
 			// 2968.28
 			// 利率周期2022-05-18 ~ 2022-06-17 共30天
 			// 实际天数2022-05-26 ~ 2022-06-17 共23天
@@ -82,7 +72,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			days = loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
 			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 			// fmt.Printf("principal")
-		case "B": // lpr变更月
+		case loanTerm%12 == 1: // lpr变更月
 			// 分为两段
 			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)
 
@@ -94,7 +84,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			// 当年利率 2023-05-25 ~ 2023-06-18
 			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(2)
 
-		case "C": // 最后一期
+		case loanTerm == loan.InitialTerm: // 最后一期
 			lastDueDate := loan.InitialDate.AddDate(0, loanTerm, 0)
 			days = loan.daysDiff(loan.previousDueDate(dueDate), lastDueDate)
 			principalPayment = lastPrincipalPayment.Round(2)
