@@ -34,11 +34,11 @@ func (loan *Loan) daysDiff(startDate, endDate time.Time) decimal.Decimal {
 	return decimal.NewFromInt(int64(daysDiff))
 }
 
-func (loan *Loan) currentYearLPRUpdate(dueDate time.Time) (decimal.Decimal, decimal.Decimal) {
-	currentYearLPRUpdateDate := time.Date(dueDate.Year(), loan.InitialDate.Month(), loan.InitialDate.Day(), 0, 0, 0, 0, loan.InitialDate.Location())
+func (loan *Loan) LPRChangeDateOffset(dueDate time.Time) (decimal.Decimal, decimal.Decimal) {
+	LPRUpdateDate := time.Date(dueDate.Year(), loan.InitialDate.Month(), loan.InitialDate.Day(), 0, 0, 0, 0, loan.InitialDate.Location())
 	previousDueDate := loan.previousDueDate(dueDate)
 	// lpr变更前的天数
-	daysBefore := loan.daysDiff(previousDueDate, currentYearLPRUpdateDate)
+	daysBefore := loan.daysDiff(previousDueDate, LPRUpdateDate)
 	// fmt.Println(daysBefore)
 	daysAfter := decimal.NewFromInt(30).Sub(daysBefore)
 	return daysBefore, daysAfter

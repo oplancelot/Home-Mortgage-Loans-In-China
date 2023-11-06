@@ -80,7 +80,7 @@ func handlePOSTRequest(c *gin.Context) {
 		return
 	}
 
-	report := loan.LoanPrintReport(inputData, action)
+	report := loan.LoanPrintTable(inputData, action)
 
 	// 使用 renderTemplate 函数渲染模板
 	renderTemplate(c, inputData, report)

@@ -13,14 +13,13 @@ type MonthlyPayment struct {
 	Interest           decimal.Decimal // 利息部分
 	MonthTotalAmount   decimal.Decimal // 当月还款总金额
 	RemainingPrincipal decimal.Decimal // 剩余本金
-	TotalInterestPaid  decimal.Decimal // 已支付总利息
 	DueDateRate        decimal.Decimal // 当月利率=lpr+加点
 	DueDate            time.Time       // 当月还款日期
 }
 
 // !EPP 是  "Equal Principal Payments"  的缩写，意思是等额本息。
 // 在等额本金还款方式下，贷款人每个月偿还的本金金额是固定的，而利息金额会随着剩余本金的减少而逐渐减少。
-
+// Annual Percentage Rate (APR) 年利率
 // 等额本息计算公式
 // "Principal and Interest Payment" 的常见缩写是 P&I Payment
 // P&I Payment=PP+IP
@@ -32,7 +31,7 @@ type MonthlyPayment struct {
 // RLPRemaining Loan Principal
 // MIR=Monthly Interest Rate 月利率
 // 年利率Annual Interest Rate = AIR
-func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []MonthlyPayment {
+func (loan *Loan) EqualPrincipalPayment(earlyRepayment []EarlyRepayment) []MonthlyPayment {
 	// 计算利息的规则
 
 	// 1.天数:全年360天,12个月每月30天
@@ -72,9 +71,10 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 
 		remainingPrincipal = amount
 		// 以下处理每月正常还款
-		// 计算利率利息
-		currentYearRate := loan.getClosestLPRForYear(dueDate).Add(loan.PlusSpread)
-
+		// 年利率APR,Annual Percentage Rate
+		// 月利率MIR,Monthly Interest Rate
+		APR := loan.getClosestLPRForYear(dueDate).Add(loan.PlusSpread)
+		MIR := APR.Div(decimal.NewFromInt(1200))
 		switch {
 		case loanTerm == 1: // 第一期
 			// 2968.28
@@ -82,30 +82,31 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			// 实际天数2022-05-26 ~ 2022-06-17 共23天
 			// days := int(dueDate.Sub(loan.InitialDate).Hours() / 24)
 			days := loan.daysDiff(loan.InitialDate, dueDate).Sub(decimal.NewFromInt(1))
-			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
+			interestPayment = remainingPrincipal.Mul(MIR).Div(decimal.NewFromInt(30)).Mul(days).Round(2)
 			// fmt.Printf("principal")
 		case loanTerm%12 == 1: // lpr变更月
 			// 分为两段
-			daysBefore, daysAfter := loan.currentYearLPRUpdate(dueDate)
+			daysBefore, daysAfter := loan.LPRChangeDateOffset(dueDate)
 
 			// 上一年利率 2023-05-18 ~ 2023-05-24
 			previousDueDate := loan.previousDueDate(dueDate)
-			previousYearRate := loan.getClosestLPRForYear(previousDueDate).Add(loan.PlusSpread)
-			interestPayment = remainingPrincipal.Mul(previousYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(daysBefore).Round(4)
+			previousAPR := loan.getClosestLPRForYear(previousDueDate).Add(loan.PlusSpread)
+			previousMIR := previousAPR.Div(decimal.NewFromInt(1200))
+			interestPayment = remainingPrincipal.Mul(previousMIR).Div(decimal.NewFromInt(30)).Mul(daysBefore).Round(4)
 
 			// 当年利率 2023-05-25 ~ 2023-06-18
-			interestPayment = interestPayment.Add((remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360))).Mul(daysAfter)).Round(2)
+			interestPayment = interestPayment.Add((remainingPrincipal.Mul(MIR).Div(decimal.NewFromInt(30)).Mul(daysAfter))).Round(2)
 
 		case loanTerm == loan.InitialTerm: // 最后一期
 			lastDueDate := loan.InitialDate.AddDate(0, loanTerm, 0)
 			days := loan.daysDiff(loan.previousDueDate(dueDate), lastDueDate)
 			principalPayment = lastPrincipalPayment.Round(2)
 			dueDate = lastDueDate
-			interestPayment = lastPrincipalPayment.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
+			interestPayment = lastPrincipalPayment.Mul(APR).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(days).Round(2)
 
 		default:
 			remainDay := decimal.NewFromInt(int64(30)).Sub(daysDiff)
-			interestPayment = remainingPrincipal.Mul(currentYearRate).Div(decimal.NewFromInt(100)).Div(decimal.NewFromInt(360)).Mul(remainDay).Round(2)
+			interestPayment = remainingPrincipal.Mul(MIR).Div(decimal.NewFromInt(30)).Mul(remainDay).Round(2)
 
 		}
 
@@ -117,7 +118,7 @@ func (loan *Loan) EqualPrincipalPaymentPlan(earlyRepayment []EarlyRepayment) []M
 			Interest:           interestPayment,
 			MonthTotalAmount:   principalPayment.Add(interestPayment),
 			RemainingPrincipal: remainingPrincipal,
-			DueDateRate:        currentYearRate,
+			DueDateRate:        APR,
 			DueDate:            dueDate,
 		}
 		monthlypayments = append(monthlypayments, payment)

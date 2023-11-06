@@ -72,7 +72,7 @@ func monthlyPayment2Report(payments []MonthlyPayment, report []Report) []Report 
 			Interest:           payment.Interest,
 			MonthTotalAmount:   payment.MonthTotalAmount,
 			RemainingPrincipal: payment.RemainingPrincipal,
-			TotalInterestPaid:  payment.TotalInterestPaid,
+			TotalInterestPaid:  decimal.Zero,
 			DueDateRate:        payment.DueDateRate,
 			DueDate:            payment.DueDate,
 		}
@@ -91,7 +91,7 @@ func sortReport(reports []Report) {
 
 }
 
-func updateReport(reports []Report) {
+func CalculateTotalInterest(reports []Report) {
 	for i := 1; i < len(reports); i++ {
 
 		reports[i].TotalInterestPaid = reports[i-1].TotalInterestPaid.Add(reports[i].Interest)
@@ -99,7 +99,7 @@ func updateReport(reports []Report) {
 	}
 }
 
-func table(reports []Report) string {
+func Report2table(reports []Report) string {
 
 	// 创建 tablewriter 实例
 	tableString := &strings.Builder{}
@@ -121,7 +121,7 @@ func table(reports []Report) string {
 	}
 	// 渲染表格到 buffer 中
 	// 设置表格内容，可以调用 table.SetHeader()、table.Append() 等方法
-	table.SetHeader([]string{"序号", "期数", "明细", "日期", "本金", "利息", "本月还款   ", "剩余本金", "已支付总利息", "本月利率"})
+	table.SetHeader([]string{"序号", "期数", "明细", "日期", "本金", "利息", "本月还款   ", "剩余本金", "利息合计", "APR"})
 	table.SetAutoWrapText(true)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -145,27 +145,29 @@ type Input struct {
 	EarlyRepayment []EarlyRepayment
 }
 
-func LoanPrintReport(inputdata Input, action string) string {
+func LoanPrintTable(inputdata Input, action string) string {
 	var payments []MonthlyPayment
-	if action == "principal" {
-		// 计算等额本金还款计划
-		payments = inputdata.Loan.EqualPrincipalPaymentPlan(inputdata.EarlyRepayment)
 
-	} else {
+	switch action {
+	case "epp":
+		// 计算等额本金还款计划
+		payments = inputdata.Loan.EqualPrincipalPayment(inputdata.EarlyRepayment)
+	default:
 		// 计算等额本息还款计划
-		payments = inputdata.Loan.EqualInstallmentPaymentPlan(inputdata.EarlyRepayment)
+		payments = inputdata.Loan.EqualMonthlyInstallment(inputdata.EarlyRepayment)
 
 	}
+
 	// 整理数据
 	report := []Report{}
 	report = loan2Report(inputdata.Loan, report)
 	report = monthlyPayment2Report(payments, report)
 	report = earlyRepayment2Report(inputdata.EarlyRepayment, report)
 	sortReport(report)
-	updateReport(report)
+	CalculateTotalInterest(report)
 
 	// printReport(report)
-	p := table(report)
+	p := Report2table(report)
 
 	return p
 }
