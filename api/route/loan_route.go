@@ -2,52 +2,14 @@ package route
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/api/controller"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/bootstrap"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/internal/loan"
-	"github.com/shopspring/decimal"
 )
 
-func parseFormData(c *gin.Context) (inputData loan.Input, action string, err error) {
-	action = c.PostForm("action")
-	principal, _ := strconv.ParseFloat(c.DefaultPostForm("principal", "0"), 64)
-	loanTerm, _ := strconv.Atoi(c.DefaultPostForm("loanTerm", "12"))
-	startDate := c.DefaultPostForm("startDate", "2022-05-25")
-	plusSpread, _ := strconv.ParseFloat(c.DefaultPostForm("plusSpread", "0"), 64)
-	paymentDueDay, _ := strconv.Atoi(c.DefaultPostForm("paymentDueDay", "1"))
-
-	// 获取提前还款信息的值
-	earlyRepayment1Amount, _ := strconv.ParseFloat(c.DefaultPostForm("earlyRepayment1Amount", "0"), 64)
-	earlyRepayment1Date := c.DefaultPostForm("earlyRepayment1Date", "2023-08-19")
-
-	earlyRepayment2Amount, _ := strconv.ParseFloat(c.DefaultPostForm("earlyRepayment2Amount", "0"), 64)
-	earlyRepayment2Date := c.DefaultPostForm("earlyRepayment2Date", "2099-05-25")
-
-	earlyRepayment3Amount, _ := strconv.ParseFloat(c.DefaultPostForm("earlyRepayment3Amount", "0"), 64)
-	earlyRepayment3Date := c.DefaultPostForm("earlyRepayment3Date", "2099-05-25")
-
-	inputData = loan.Input{
-		Loan: loan.Loan{
-			InitialPrincipal: decimal.NewFromFloat(principal),
-			InitialTerm:      loanTerm,
-			InitialDate:      loan.ParseDate(startDate),
-			LPR:              loan.Lprs, // 常量
-			PlusSpread:       decimal.NewFromFloat(plusSpread),
-			PaymentDueDay:    paymentDueDay,
-		},
-		EarlyRepayment: []loan.EarlyRepayment{
-			{Amount: decimal.NewFromFloat(earlyRepayment1Amount), Date: loan.ParseDate(earlyRepayment1Date)},
-			{Amount: decimal.NewFromFloat(earlyRepayment2Amount), Date: loan.ParseDate(earlyRepayment2Date)},
-			{Amount: decimal.NewFromFloat(earlyRepayment3Amount), Date: loan.ParseDate(earlyRepayment3Date)},
-		},
-	}
-
-	return inputData, action, nil
-}
 func renderTemplate(c *gin.Context, inputData loan.Input, report string) {
 	c.HTML(http.StatusOK, "loan.tmpl", gin.H{
 		"Principal":             inputData.Loan.InitialPrincipal,
@@ -72,20 +34,16 @@ func handleGETRequest(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// inputData, _, err := parseFormData(c)
-	if err != nil {
-		// 处理错误...
-		return
-	}
+
 	renderTemplate(c, inputData, "")
 }
 
 func handlePOSTRequest(c *gin.Context) {
-	// inputData, action, err := parseFormData(c)
 	validator := controller.InputValidator{}
 	inputData, err, action := validator.Validate(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+
 		return
 	}
 

@@ -28,7 +28,7 @@ func (v InputValidator) Validate(c *gin.Context) (inputData loan.Input, err erro
 		return loan.Input{}, errors.New("Invalid loanTerm: it should be an integer"), action
 	}
 	if loanTerm < 12 || loanTerm > 360 {
-		return loan.Input{}, errors.New("Invalid plusSpread: it should be between 12 and 360"), action
+		return loan.Input{}, errors.New("Invalid loanTerm: it should be between 12 and 360"), action
 	}
 
 	startDate := c.DefaultPostForm("startDate", "2022-05-25")
