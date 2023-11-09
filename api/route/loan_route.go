@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/oplancelot/Home-Mortgage-Loans-In-China/api/controller"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/bootstrap"
 	"github.com/oplancelot/Home-Mortgage-Loans-In-China/internal/loan"
 	"github.com/shopspring/decimal"
@@ -65,7 +66,13 @@ func renderTemplate(c *gin.Context, inputData loan.Input, report string) {
 }
 
 func handleGETRequest(c *gin.Context) {
-	inputData, _, err := parseFormData(c)
+	validator := controller.InputValidator{}
+	inputData, err, _ := validator.Validate(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// inputData, _, err := parseFormData(c)
 	if err != nil {
 		// 处理错误...
 		return
@@ -74,9 +81,11 @@ func handleGETRequest(c *gin.Context) {
 }
 
 func handlePOSTRequest(c *gin.Context) {
-	inputData, action, err := parseFormData(c)
+	// inputData, action, err := parseFormData(c)
+	validator := controller.InputValidator{}
+	inputData, err, action := validator.Validate(c)
 	if err != nil {
-		// 处理错误...
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
